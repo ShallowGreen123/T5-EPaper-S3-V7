@@ -118,7 +118,6 @@ void ui_full_clean(void)
 void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 {
     if(disp_flush_enabled) {
-        static int refr_cnt = 0;
         uint16_t w = lv_area_get_width(area);
         uint16_t h = lv_area_get_height(area);
         lv_color32_t *t32 = (lv_color32_t *)color_p;
@@ -141,7 +140,6 @@ void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 
 static void flush_timer_cb(lv_timer_t *t)
 {
-    static int idx = 0;
     lv_disp_t *disp = lv_disp_get_default();
 
     lv_coord_t w = epd_rotated_display_width();
