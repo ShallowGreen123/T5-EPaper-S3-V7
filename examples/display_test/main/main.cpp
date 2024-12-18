@@ -29,6 +29,8 @@
 #ifdef ARDUINO_ARCH_ESP32
 // Arduino
 #include <Arduino.h>
+#include <Wire.h>
+#include <SPI.h>
 #else 
 // ESP-IDF
 void idf_setup();
@@ -57,6 +59,8 @@ extern "C" void app_main() {
 EpdiyHighlevelState hl;
 
 void idf_setup() {
+    Wire.begin(39, 40);
+
     epd_init(&DEMO_BOARD, &ED047TC1, EPD_LUT_64K);
     // Set VCOM for boards that allow to set this in software (in mV).
     // This will print an error if unsupported. In this case,

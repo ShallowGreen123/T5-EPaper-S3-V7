@@ -25,6 +25,8 @@
 #ifdef ARDUINO_ARCH_ESP32
 // Arduino
 #include <Arduino.h>
+#include <Wire.h>
+#include <SPI.h>
 #else 
 // ESP-IDF
 void idf_setup();
@@ -64,7 +66,7 @@ extern void ui_entry(void);
 #define REFRESH_MODE_FAST   0
 #define REFRESH_MODE_NORMAL 1
 #define REFRESH_MODE_NEAT   2
-int refresh_mode = REFRESH_MODE_NORMAL;
+int refresh_mode = REFRESH_MODE_FAST;
 
 uint8_t *decodebuffer = NULL;
 lv_timer_t *flush_timer = NULL;
@@ -209,7 +211,10 @@ void lv_port_disp_init(void)
     // lv_indev_drv_register(&indev_drv);
 }
 
-void idf_setup() {
+void idf_setup() 
+{
+    Wire.begin(39, 40);
+
     epd_init(&DEMO_BOARD, &ED047TC1, EPD_LUT_64K);
     // Set VCOM for boards that allow to set this in software (in mV).
     // This will print an error if unsupported. In this case,
