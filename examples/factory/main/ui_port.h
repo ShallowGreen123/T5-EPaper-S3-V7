@@ -9,6 +9,7 @@ LV_IMG_DECLARE(img_refresh)
 LV_IMG_DECLARE(img_sd_card)
 LV_IMG_DECLARE(img_setting)
 LV_IMG_DECLARE(img_shutdown)
+LV_IMG_DECLARE(img_start)
 LV_IMG_DECLARE(img_test)
 LV_IMG_DECLARE(img_wifi)
 
@@ -49,9 +50,8 @@ String ui_wifi_get_ip(void);
 const char *ui_wifi_get_ssid(void);
 const char *ui_wifi_get_pwd(void);
 
-
-
-
+// shutdown
+void ui_shutdown(void);
 
 
 

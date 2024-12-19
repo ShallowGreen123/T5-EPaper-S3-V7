@@ -13,7 +13,10 @@
 #define LCD_HOR_SIZE LV_HOR_RES
 #define LCD_VER_SIZE LV_VER_RES
 
+#define UI_SLIDING_DISTANCE     100
+
 #define EPD_COLOR_BG          0xffffff
+#define EPD_COLOR_FG          0x000000
 #define EPD_COLOR_FOCUS_ON    0x91B821
 #define EPD_COLOR_TEXT        0x000000
 #define EPD_COLOR_BORDER      0xBBBBBB
@@ -39,6 +42,8 @@ enum {
     SCREEN8_ID,
     SCREEN9_ID,
 };
+
+typedef void (*ui_indev_read_cb)(int);
 
 struct menu_icon {
     const void *icon_src;

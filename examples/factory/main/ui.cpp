@@ -5,9 +5,11 @@
 #include "ui.h"
 #include "ui_port.h"
 
+#define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
+
+static lv_timer_t *touch_chk_timer = NULL;
 //************************************[ Other fun ]******************************************
 #if 1
-
 void scr_back_btn_create(lv_obj_t *parent, const char *text, lv_event_cb_t cb)
 {
     lv_obj_t * btn = lv_btn_create(parent);
@@ -53,28 +55,83 @@ void scr_back_btn_create(lv_obj_t *parent, const char *text, lv_event_cb_t cb)
 #endif
 //************************************[ screen 0 ]****************************************** menu
 #if 1
-
 const struct menu_icon icon_buf[] = {
     {&img_clock,    "clock"   , 45,   45  }, 
-    {&img_lora,     "lora"    , 210,  45 },
-    {&img_sd_card,  "sd card" , 375,  45 },
-    {&img_setting,  "setting" , 45,   250  },
+    {&img_lora,     "lora"    , 210,  45  },
+    {&img_sd_card,  "sd card" , 375,  45  },
+    {&img_setting,  "setting" , 45,   250 },
     {&img_test,     "test"    , 210,  250 },
     {&img_wifi,     "wifi"    , 375,  250 },
-    {&img_battery,  "battery" , 45,   455  },
-    {&img_shutdown, "shutdown", 210,  455 },
-    {&img_refresh,  "refresh" , 375,  455 },
+    {&img_battery,  "battery" , 45,   455 },
+    // {&img_shutdown, "shutdown", 210,  455 },
+    // {&img_refresh,  "refresh" , 375,  455 },
 };
 
-lv_obj_t *scr0_cont;
+const struct menu_icon icon_buf2[] = {
+    {&img_shutdown,   "shutdown", 45,  45 },
+    {&img_refresh,    "refresh" , 210, 45 },
+};
+
+static ui_indev_read_cb ui_get_gesture_dir = NULL;
+static lv_obj_t *ui_Panel4;
+static lv_obj_t *menu_screen1;
+static lv_obj_t *menu_screen2;
+static int page_num = 1;
+static int page_curr = 0;
+
+static void menu_get_gesture_dir(int dir)
+{
+    if(dir == LV_DIR_LEFT) {
+        if(page_curr < page_num){
+            page_curr++;
+            // ui_disp_full_refr();
+            // // ui_full_refresh();
+        }
+        else{
+            return ;
+        }
+    } else if(dir == LV_DIR_RIGHT) {
+        if(page_curr > 0){
+            page_curr--;
+            // // ui_full_refresh();
+        }
+        else{
+            return ;
+        }
+    }   
+
+    Serial.printf("[gesture] curr=%d, sum=%d, dir=%d\n", page_curr, page_num, dir);
+
+    if(page_curr == 1) {
+        lv_obj_clear_flag(menu_screen2, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(menu_screen1, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 0), lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 1), lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    } else if(page_curr == 0) {
+        lv_obj_clear_flag(menu_screen1, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(menu_screen2, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 0), lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 1), lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    }
+}
+
 
 static void menu_btn_event(lv_event_t *e)
 {
     int data = (int)e->user_data;
     if(e->code == LV_EVENT_CLICKED) {
 
-        ui_full_refresh();
-        // printf("%s is clicked.\n", icon_buf[data].icon_str);
+        // // ui_full_refresh();
+        // // ui_full_clean();
+        if(data < ARRAY_LEN(icon_buf))
+        {
+            printf("[%d] %s is clicked.\n", data, icon_buf[data].icon_str);
+        }
+        else{
+            printf("[%d] %s is clicked.\n", data, icon_buf2[data].icon_str);
+        }
+        
         switch (data) {
             case 0: scr_mgr_push(SCREEN1_ID, false); break;
             case 1: scr_mgr_push(SCREEN2_ID, false); break;
@@ -92,28 +149,124 @@ static void menu_btn_event(lv_event_t *e)
 
 static void create0(lv_obj_t *parent) 
 {
-    for(int i = 0; i < sizeof(icon_buf)/sizeof(icon_buf[0]); i++) {
-        lv_obj_t * btn = lv_btn_create(parent);
-        lv_obj_remove_style_all(btn);
-        lv_obj_set_width(btn, 120);
-        lv_obj_set_height(btn, 160);
-        lv_obj_set_x(btn, icon_buf[i].offs_x);
-        lv_obj_set_y(btn, icon_buf[i].offs_y);
-        lv_obj_add_flag(btn, LV_OBJ_FLAG_OVERFLOW_VISIBLE | LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
-        lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
-        lv_obj_set_style_radius(btn, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_border_width(btn, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_shadow_width(btn, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_shadow_spread(btn, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_PRESSED);
-        lv_obj_set_style_bg_opa(btn, 255, LV_PART_MAIN | LV_STATE_PRESSED);
-        lv_obj_set_style_outline_width(btn, 3, LV_PART_MAIN | LV_STATE_PRESSED);
-        lv_obj_set_style_bg_img_src(btn, icon_buf[i].icon_src, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_add_event_cb(btn, menu_btn_event, LV_EVENT_CLICKED, (void *)i);
+    int status_bar_height = 60;
+
+    lv_obj_t *status_bar = lv_obj_create(parent);
+    lv_obj_set_size(status_bar, LV_HOR_RES, status_bar_height);
+    lv_obj_set_style_pad_all(status_bar, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_width(status_bar, 0, LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(status_bar, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(status_bar, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *bat = lv_label_create(status_bar);
+    lv_label_set_text_fmt(bat, "%s %d", LV_SYMBOL_BATTERY_2, 50);
+    lv_obj_align(bat, LV_ALIGN_RIGHT_MID, -20, 3);
+
+    lv_obj_t *time = lv_label_create(status_bar);
+    // lv_label_set_text_fmt(time, "%02d:%02d", 10, 19);
+    lv_obj_align(time, LV_ALIGN_CENTER, 0, 3);
+
+    uint8_t h, m, s;
+    ui_clock_get_time(&h, &m, &s);
+    lv_label_set_text_fmt(time, "%02d:%02d", h, m);
+
+    menu_screen1 = lv_obj_create(parent);
+    lv_obj_set_size(menu_screen1, lv_pct(100), LV_VER_RES - status_bar_height);
+    lv_obj_set_style_bg_color(menu_screen1, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(menu_screen1, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_style_border_width(menu_screen1, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(menu_screen1, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
+    lv_obj_set_style_border_side(menu_screen1, LV_BORDER_SIDE_TOP, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(menu_screen1, 0, LV_PART_MAIN);
+    lv_obj_align(menu_screen1, LV_ALIGN_BOTTOM_MID, 0, 0);
+    // lv_obj_add_flag(menu_screen1, LV_OBJ_FLAG_HIDDEN);
+
+    menu_screen2 = lv_obj_create(parent);
+    lv_obj_set_size(menu_screen2, lv_pct(100), LV_VER_RES - status_bar_height);
+    lv_obj_set_style_bg_color(menu_screen2, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(menu_screen2, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_style_border_width(menu_screen2, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(menu_screen2, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
+    lv_obj_set_style_border_side(menu_screen2, LV_BORDER_SIDE_TOP, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(menu_screen2, 0, LV_PART_MAIN);
+    lv_obj_align(menu_screen2, LV_ALIGN_BOTTOM_MID, 0, 0);
+    // lv_obj_add_flag(menu_screen2, LV_OBJ_FLAG_HIDDEN);
+
+    int icon_buf_len = ARRAY_LEN(icon_buf);
+    int icon_buf2_len = ARRAY_LEN(icon_buf2);
+
+    for(int i = 0; i < icon_buf_len; i++) {
+        lv_obj_t *img = lv_img_create(menu_screen1);
+        lv_obj_add_flag(img, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_x(img, icon_buf[i].offs_x);
+        lv_obj_set_y(img, icon_buf[i].offs_y);
+        lv_img_set_src(img, icon_buf[i].icon_src);
+        lv_obj_add_event_cb(img, menu_btn_event, LV_EVENT_CLICKED, (void *)i);
+    }
+
+    for(int i = 0; i < icon_buf2_len; i++) {
+        lv_obj_t *img = lv_img_create(menu_screen2);
+        lv_obj_add_flag(img, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_x(img, icon_buf2[i].offs_x);
+        lv_obj_set_y(img, icon_buf2[i].offs_y);
+        lv_img_set_src(img, icon_buf2[i].icon_src);
+        lv_obj_add_event_cb(img, menu_btn_event, LV_EVENT_CLICKED, (void *)(icon_buf_len + i));
+    }
+
+    ui_Panel4 = lv_obj_create(parent);
+    lv_obj_set_width(ui_Panel4, 240);
+    lv_obj_set_height(ui_Panel4, 35);
+    lv_obj_set_align(ui_Panel4, LV_ALIGN_BOTTOM_MID);
+    lv_obj_set_flex_flow(ui_Panel4, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(ui_Panel4, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_clear_flag(ui_Panel4, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_radius(ui_Panel4, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_Panel4, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_Panel4, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Panel4, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui_Panel4, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(ui_Panel4, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Panel4, 0, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui_Panel4, 0, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(ui_Panel4, 0, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
+
+    lv_obj_t *ui_Button11 = lv_btn_create(ui_Panel4);
+    lv_obj_set_width(ui_Button11, 15);
+    lv_obj_set_height(ui_Button11, 15);
+    lv_obj_add_flag(ui_Button11, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_Button11, LV_OBJ_FLAG_CHECKABLE);      /// Flags
+    lv_obj_set_style_radius(ui_Button11, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Button11, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_Button11, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *ui_Button12 = lv_btn_create(ui_Panel4);
+    lv_obj_set_width(ui_Button12, 15);
+    lv_obj_set_height(ui_Button12, 15);
+    lv_obj_add_flag(ui_Button12, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_Button12, LV_OBJ_FLAG_CHECKABLE);      /// Flags
+    lv_obj_set_style_radius(ui_Button12, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Button12, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    if(page_curr == 1) {
+        lv_obj_clear_flag(menu_screen2, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(menu_screen1, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 0), lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 1), lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    } else if(page_curr == 0) {
+        lv_obj_clear_flag(menu_screen1, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(menu_screen2, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 0), lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 1), lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     }
 }
-static void entry0(void) { }
-static void exit0(void) { }
+static void entry0(void) {
+    ui_get_gesture_dir = menu_get_gesture_dir;
+    lv_timer_resume(touch_chk_timer);
+ }
+static void exit0(void) {
+    ui_get_gesture_dir = NULL;
+    lv_timer_pause(touch_chk_timer);
+}
 static void destroy0(void) { }
 
 static scr_lifecycle_t screen0 = {
@@ -173,7 +326,7 @@ static void get_timer_event(lv_timer_t *t)
 static void scr1_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
-        ui_full_refresh();
+        // ui_full_refresh();
         scr_mgr_switch(SCREEN0_ID, false);
     }
 }
@@ -265,7 +418,7 @@ static lv_obj_t *lora_lab_buf[LORA_RECV_INFO_MAX_LINE] = {0};
 static void scr2_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
-        ui_full_refresh();
+        // ui_full_refresh();
         scr_mgr_switch(SCREEN0_ID, false);
     }
 }
@@ -495,14 +648,14 @@ static void read_img_btn_event(lv_event_t * e)
         lv_img_set_src(ui_photos_img, path);
         printf("event [%s]\n", path);
 
-        ui_full_refresh();
+        // ui_full_refresh();
     }
 }
 
 static void scr3_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
-        ui_full_refresh();
+        // ui_full_refresh();
         scr_mgr_switch(SCREEN0_ID, false);
     }
 }
@@ -617,7 +770,7 @@ static scr_lifecycle_t screen3 = {
 static void scr4_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED) {
-        ui_full_refresh();
+        // ui_full_refresh();
         scr_mgr_switch(SCREEN0_ID, false);
     }
 }
@@ -644,7 +797,7 @@ static scr_lifecycle_t screen4 = {
 static void scr5_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED) {
-        ui_full_refresh();
+        // ui_full_refresh();
         scr_mgr_switch(SCREEN0_ID, false);
     }
 }
@@ -783,7 +936,7 @@ static void wifi_config_event_handler(lv_event_t *e)
 static void scr6_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
-        ui_full_refresh();
+        // ui_full_refresh();
         scr_mgr_switch(SCREEN0_ID, false);
     }
 }
@@ -886,11 +1039,160 @@ const char * __attribute__((weak)) ui_if_epd_get_WIFI_pwd(void) {
 }
 // end
 #endif
+//************************************[ screen 7 ]****************************************** battery
+#if 1
+
+#define line_max 28
+
+static void battery_set_line(lv_obj_t *label, const char *str1, const char *str2)
+{
+    int w2 = strlen(str2);
+    int w1 = line_max - w2;
+    lv_label_set_text_fmt(label, "%-*s%-*s", w1, str1, w2, str2);
+}
+
+static void scr7_btn_event_cb(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        // ui_full_refresh();
+        scr_mgr_switch(SCREEN0_ID, false);
+    }
+}
+
+static void create7(lv_obj_t *parent)
+{
+    // back
+    scr_back_btn_create(parent, "battery", scr7_btn_event_cb);
+}
+
+static void entry7(void) {
+}
+static void exit7(void) {
+}
+static void destroy7(void) { 
+
+}
+
+static scr_lifecycle_t screen7 = {
+    .create = create7,
+    .entry = entry7,
+    .exit  = exit7,
+    .destroy = destroy7,
+};
+#undef line_max
+#endif
+//************************************[ screen 8 ]****************************************** shutdown
+#if 1
+static void scr8_btn_event_cb(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        // ui_full_refresh();
+        scr_mgr_switch(SCREEN0_ID, false);
+    }
+}
+
+static void scr8_shutdown_timer_event(lv_timer_t *t)
+{
+    lv_timer_del(t);
+    ui_shutdown();
+}
+
+static void create8(lv_obj_t *parent)
+{
+
+    lv_obj_t * img = lv_img_create(parent);
+    lv_img_set_src(img, &img_start);
+    lv_obj_center(img);
+
+    // const char *str1 = "PWR: Press and hold to power on";
+
+    // lv_obj_t *label = lv_label_create(parent);
+    // lv_label_set_text(label, str1);
+    // lv_obj_set_style_transform_angle(label, -900, 0);
+    // lv_obj_align(label, LV_ALIGN_RIGHT_MID, 60, 80);
+
+    // lv_coord_t w = lv_txt_get_width(str1, strlen(str1), &Font_Mono_Bold_20, 0, false);
+    // lv_obj_set_style_transform_pivot_x(label, w / 2, 0);
+
+    // back
+    scr_back_btn_create(parent, "Shoutdown", scr8_btn_event_cb);
+
+    lv_timer_create(scr8_shutdown_timer_event, 3000, NULL);
+}
+
+static void entry8(void) {
+    
+}
+static void exit8(void) {
+}
+static void destroy8(void) { 
+
+}
+
+static scr_lifecycle_t screen8 = {
+    .create = create8,
+    .entry = entry8,
+    .exit  = exit8,
+    .destroy = destroy8,
+};
+#endif
 //************************************[ UI ENTRY ]******************************************
+static lv_obj_t *menu_keypad;
+static lv_timer_t *menu_timer = NULL;
+
+static void indev_get_gesture_dir(lv_timer_t *t)
+{
+    lv_indev_data_t data;
+    lv_indev_t * indev_pointer = lv_indev_get_next(NULL);
+    lv_coord_t diff_x = 0;
+    lv_coord_t diff_y = 0;
+
+    static lv_point_t last_point;
+    static bool is_press = false;
+
+    _lv_indev_read(indev_pointer, &data);
+
+    if(data.state == LV_INDEV_STATE_PRESSED){
+
+        if(is_press == false) {
+            is_press = true;
+            last_point = data.point;
+            
+        }
+
+        diff_x = last_point.x - data.point.x;
+        diff_y = last_point.x - data.point.y;
+
+        Serial.printf("[ui indev] x=%d, y=%d, diffx=%d\n", data.point.x, data.point.y, diff_x);
+
+        if(diff_x > UI_SLIDING_DISTANCE) { // right
+            if(ui_get_gesture_dir) {
+                ui_get_gesture_dir(LV_DIR_LEFT);
+            }
+            last_point.x = 0;
+            is_press = false;
+        } else if(diff_x < -UI_SLIDING_DISTANCE) { // left
+            if(ui_get_gesture_dir) {
+                ui_get_gesture_dir(LV_DIR_RIGHT);
+            }
+            last_point.x = 0;
+            is_press = false;
+        }
+        
+    } else {
+        is_press = false;
+        last_point.x = 0;
+        last_point.y = 0;
+    }
+}
+
 void ui_entry(void)
 {
     lv_disp_t *disp = lv_disp_get_default();
     disp->theme = lv_theme_mono_init(disp, false, LV_FONT_DEFAULT);
+
+    touch_chk_timer = lv_timer_create(indev_get_gesture_dir, LV_INDEV_DEF_READ_PERIOD, NULL);
+    lv_timer_pause(touch_chk_timer);
 
     scr_mgr_init();
     scr_mgr_set_bg_color(EPD_COLOR_BG);
@@ -901,8 +1203,8 @@ void ui_entry(void)
     scr_mgr_register(SCREEN4_ID, &screen4); // setting
     scr_mgr_register(SCREEN5_ID, &screen5); // test
     scr_mgr_register(SCREEN6_ID, &screen6); // wifi
-    // scr_mgr_register(SCREEN7_ID, &screen7); // battery
-    // scr_mgr_register(SCREEN8_ID, &screen8); // battery
+    scr_mgr_register(SCREEN7_ID, &screen7); // battery
+    scr_mgr_register(SCREEN8_ID, &screen8); // shutdown
     // scr_mgr_register(SCREEN9_ID, &screen9); // battery
 
     scr_mgr_switch(SCREEN0_ID, false); // set root screen

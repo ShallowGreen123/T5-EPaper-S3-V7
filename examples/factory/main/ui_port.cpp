@@ -23,8 +23,10 @@ void ui_clock_get_time(uint8_t *h, uint8_t *m, uint8_t *s)
     // *m = timeinfo.tm_min;
     // *s = timeinfo.tm_sec;
 
+    static int test_m = 19;
+
     *h = 10;
-    *m = 19;
+    *m = test_m++;
     *s = 0;
 }
 
@@ -35,9 +37,11 @@ void ui_clock_get_data(uint8_t *year, uint8_t *month, uint8_t *day, uint8_t *wee
     // *day = timeinfo.tm_mday;
     // *week = timeinfo.tm_wday;
 
+    static int test_data = 18;
+
     *year = 24;
     *month = 12;
-    *day = 18;
+    *day = test_data++;
     *week = 2;
 }
 //************************************[ screen 2 ]****************************************** lora
@@ -105,5 +109,11 @@ const char *ui_wifi_get_pwd(void)
 /* 27220 */
 
 //
+//************************************[ screen 8 ]****************************************** battery
+
+void ui_shutdown(void)
+{
+
+}
 
 //************************************[ home btn ]******************************************

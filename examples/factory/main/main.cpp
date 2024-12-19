@@ -133,7 +133,7 @@ static void flush_timer_cb(lv_timer_t *t)
     
     epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
     epd_poweron();
-    epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area);
+    checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
     epd_poweroff();
 
     static int cnt = 0;
@@ -145,29 +145,33 @@ static void flush_timer_cb(lv_timer_t *t)
 static void dips_render_start_cb(struct _lv_disp_drv_t * disp_drv)
 {
     if(flush_timer == NULL) {
-        flush_timer = lv_timer_create(flush_timer_cb, 500, NULL);
+        flush_timer = lv_timer_create(flush_timer_cb, 50, NULL);
         lv_timer_ready(flush_timer);
     } else {
         lv_timer_ready(flush_timer);
         lv_timer_resume(flush_timer);
     }
-    printf("dips_render_start_cb\n");
+    // printf("dips_render_start_cb\n");
 }
 
 void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
 {
-    // int16_t  x, y;
+    int16_t  x, y;
 
-    int16_t x[5], y[5];
+    // int16_t x[5], y[5];
     if(touch.isPressed()) {
-        if(touch.getPoint(x, y)){
-            data->point.x = x[0];
-            data->point.y = y[0];
+        // if(touch.getPoint(x, y)){
+        if(touch.getPoint(&x, &y, 1)){
+            data->point.x = x;
+            data->point.y = y;
             data->state = LV_INDEV_STATE_PRESSED;
-            Serial.printf("input X:%d Y:%d\n", data->point.x, data->point.y);
-        }else {
-            data->state = LV_INDEV_STATE_RELEASED; 
+            // Serial.printf("[input] X:%d Y:%d\n", data->point.x, data->point.y);
         }
+    } 
+    else{
+        data->point.x = 0;
+        data->point.y = 0;
+        data->state = LV_INDEV_STATE_RELEASED; 
     }
 }
 
@@ -227,12 +231,11 @@ void touch_gt911_init(void)
         };
 
         disp_full_clean();
-
         disp_full_refresh();
 
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
-        epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area);
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
         epd_poweroff();
     }, NULL);
 }
@@ -258,17 +261,16 @@ void screen_init(void)
     // The display bus settings for V7 may be conservative, you can manually
     // override the bus speed to tune for speed, i.e., if you set the PSRAM speed
     // to 120MHz.
-    epd_set_lcd_pixel_clock_MHz(12);
+    epd_set_lcd_pixel_clock_MHz(17);
 
     heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
     heap_caps_print_heap_info(MALLOC_CAP_SPIRAM);
 
+    epd_poweron();
+    epd_clear();
+    epd_poweroff();
 
-    // epd_poweron();
-    // epd_clear();
-    // epd_poweroff();
-
-    disp_full_clean();
+    // disp_full_clean();
     temperature = epd_ambient_temperature();
 
     printf("current temperature: %d\n", temperature);
