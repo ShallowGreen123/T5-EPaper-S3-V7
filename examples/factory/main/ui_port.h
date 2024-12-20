@@ -38,6 +38,12 @@ bool ui_lora_recv(String *str);
 // sd
 void ui_sd_read(void);
 
+// setting
+void ui_setting_set_backlight(int bl);
+const char *ui_setting_get_backlight(int *ret_bl);
+void ui_setting_set_refresh_speed(int bl);
+const char *ui_setting_get_refresh_speed(int *ret_bl);
+
 // test
 bool ui_test_lora_init(void);
 bool ui_test_sd_init(void);

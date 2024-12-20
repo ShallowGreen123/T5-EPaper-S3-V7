@@ -33,21 +33,24 @@ EpdiyHighlevelState hl;
 int temperature = 0;
 uint8_t* fb = NULL;
 
-static inline void checkError(enum EpdDrawError err);
-
+// Touch
 TouchDrvGT911 touch;
 
+// RTC
+SensorPCF8563 rtc;
+
+// LVGL
 #define DISP_BUF_SIZE (epd_rotated_display_width() * epd_rotated_display_height())
-#define REFRESH_MODE_FAST   0
-#define REFRESH_MODE_NORMAL 1
-#define REFRESH_MODE_NEAT   2
-int refresh_mode = REFRESH_MODE_FAST;
+int refresh_mode = REFRESH_MODE_NORMAL;
 
 uint8_t *decodebuffer = NULL;
 lv_timer_t *flush_timer = NULL;
 volatile bool disp_flush_enabled = true;
 bool disp_refr_is_busy = false;
 
+/*********************************************************************************
+ *                              FUNCTION
+ * *******************************************************************************/
 static inline void checkError(enum EpdDrawError err) {
     if (err != EPD_DRAW_SUCCESS) {
         ESP_LOGE("demo", "draw error: %X", err);
@@ -110,6 +113,24 @@ void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
             t32++;
         }
 
+        // EpdRect rener_area = {
+        //     .x = 0,
+        //     .y = 0,
+        //     .width = epd_rotated_display_width(),
+        //     .height = epd_rotated_display_height(),
+        // };
+
+        // if(refresh_mode == REFRESH_MODE_NORMAL) {
+        //     disp_full_refresh();
+        // } else if(refresh_mode == REFRESH_MODE_NEAT){
+        //     disp_full_clean();
+        // }
+        
+        // epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+        // epd_poweron();
+        // checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        // epd_poweroff();
+
         // printf("[disp_flush] x1:%d, y1:%d, w:%d, h:%d\n", area->x1, area->y1, w, h);
     }
     /* Inform the graphics library that you are ready with the flushing */
@@ -125,18 +146,34 @@ static void flush_timer_cb(lv_timer_t *t)
         .height = epd_rotated_display_height(),
     };
 
-    if(refresh_mode == REFRESH_MODE_NORMAL) {
-        disp_full_refresh();
-    } else if(refresh_mode == REFRESH_MODE_NEAT){
-        disp_full_clean();
-    }
-    
-    epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
-    epd_poweron();
-    checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
-    epd_poweroff();
+    if(refresh_mode == REFRESH_MODE_FAST) 
+    {
+        // disp_full_refresh();
 
-    static int cnt = 0;
+        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+        epd_poweron();
+        // checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
+        epd_poweroff();
+    } 
+    else if(refresh_mode == REFRESH_MODE_NORMAL)
+    {
+        // disp_full_refresh();
+        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+        epd_poweron();
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        // checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
+        epd_poweroff();
+    } 
+    else if(refresh_mode == REFRESH_MODE_NEAT)
+    {
+        disp_full_refresh();
+        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+        epd_poweron();
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        epd_poweroff();
+    }
+    // static int cnt = 0;
     // printf("[flush] %d\n", cnt++);
 
     lv_timer_pause(flush_timer);
@@ -145,7 +182,7 @@ static void flush_timer_cb(lv_timer_t *t)
 static void dips_render_start_cb(struct _lv_disp_drv_t * disp_drv)
 {
     if(flush_timer == NULL) {
-        flush_timer = lv_timer_create(flush_timer_cb, 50, NULL);
+        flush_timer = lv_timer_create(flush_timer_cb, 200, NULL);
         lv_timer_ready(flush_timer);
     } else {
         lv_timer_ready(flush_timer);
@@ -240,6 +277,27 @@ void touch_gt911_init(void)
     }, NULL);
 }
 
+void rtc_pcf8563_init(void)
+{
+    pinMode(RTC_IRQ, INPUT_PULLUP);
+
+    if (!rtc.begin(Wire, PCF8563_SLAVE_ADDRESS, RTC_SDA, RTC_SCL)) {
+        Serial.println("Failed to find PCF8563 - check your wiring!");
+        while (1) {
+            delay(1000);
+        }
+    }
+
+    uint16_t year = 2024;
+    uint8_t month = 12;
+    uint8_t day = 18;
+    uint8_t hour = 10;
+    uint8_t minute = 19;
+    uint8_t second = 00;
+
+    rtc.setDateTime(year, month, day, hour, minute, second);
+}
+
 void screen_init(void)
 {
     epd_init(&DEMO_BOARD, &ED047TC1, EPD_LUT_64K);
@@ -261,16 +319,16 @@ void screen_init(void)
     // The display bus settings for V7 may be conservative, you can manually
     // override the bus speed to tune for speed, i.e., if you set the PSRAM speed
     // to 120MHz.
-    epd_set_lcd_pixel_clock_MHz(17);
+    // epd_set_lcd_pixel_clock_MHz(17);
 
     heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
     heap_caps_print_heap_info(MALLOC_CAP_SPIRAM);
 
-    epd_poweron();
-    epd_clear();
-    epd_poweroff();
+    // epd_poweron();
+    // epd_clear();
+    // epd_poweroff();
 
-    // disp_full_clean();
+    disp_full_clean();
     temperature = epd_ambient_temperature();
 
     printf("current temperature: %d\n", temperature);
@@ -283,7 +341,13 @@ void idf_setup()
 
     Wire.begin(39, 40);
 
+    pinMode(BL_EN, OUTPUT);
+    // digitalWrite(BL_EN, HIGH);
+    analogWrite(BL_EN, 0);
+
     touch_gt911_init();  // Touch --- 0x5D
+
+    rtc_pcf8563_init(); // RTC --- 0x51
 
     screen_init();
 

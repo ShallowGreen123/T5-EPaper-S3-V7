@@ -36,6 +36,7 @@ enum {
     SCREEN2_ID,
     SCREEN3_ID,
     SCREEN4_ID,
+    SCREEN4_1_ID,
     SCREEN5_ID,
     SCREEN6_ID,
     SCREEN7_ID,
@@ -51,6 +52,22 @@ struct menu_icon {
     lv_coord_t offs_x;
     lv_coord_t offs_y;
 };
+
+enum{
+    UI_SETTING_TYPE_SW,
+    UI_SETTING_TYPE_SUB,
+};
+
+typedef struct _ui_setting
+{
+    const char *name;
+    int type;
+    void (*set_cb)(int);
+    const char* (*get_cb)(int *);
+    int sub_id;
+    lv_obj_t *obj;
+    lv_obj_t *st;
+} ui_setting_handle;
 
 /*********************************************************************************
  *                              GLOBAL PROTOTYPES

@@ -18,6 +18,16 @@
 // #include "bq27220.h"
 #include <XPowersLib.h>
 
+// display refresh mode
+#define REFRESH_MODE_FAST   0
+#define REFRESH_MODE_NORMAL 1
+#define REFRESH_MODE_NEAT   2
+extern int refresh_mode;
+// Touch
+extern TouchDrvGT911 touch;
+
+// RTC
+extern SensorPCF8563 rtc;
 
 void disp_full_refresh(void);
 void disp_full_clean(void);

@@ -5,6 +5,8 @@
 #include "ui.h"
 #include "ui_port.h"
 
+/* clang-format off */
+
 #define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
 
 static lv_timer_t *touch_chk_timer = NULL;
@@ -52,6 +54,167 @@ void scr_back_btn_create(lv_obj_t *parent, const char *text, lv_event_cb_t cb)
 //     lv_obj_add_style(line1, &style_line, 0);
 //     lv_obj_set_align(line1, LV_ALIGN_LEFT_MID);
 // }
+
+/* clang-format on */
+#define SETTING_PAGE_MAX_ITEM 7
+
+#define UI_LIST_CREATE(func, handle, list, num, page_num, curr_page)                       \
+    static void func##_scr_event(lv_event_t *e)                                            \
+    {                                                                                      \
+        lv_obj_t *tgt = (lv_obj_t *)e->target;                                             \
+        ui_setting_handle *h = (ui_setting_handle *)e->user_data;                          \
+        int n;                                                                             \
+        if (e->code == LV_EVENT_CLICKED)                                                   \
+        {                                                                                  \
+            switch (h->type)                                                               \
+            {                                                                              \
+            case UI_SETTING_TYPE_SW:                                                       \
+                h->get_cb(&n);                                                             \
+                h->set_cb(n);                                                              \
+                lv_label_set_text_fmt(h->st, "%s", h->get_cb(NULL));                       \
+                break;                                                                     \
+            case UI_SETTING_TYPE_SUB:                                                      \
+                scr_mgr_push(h->sub_id, false);                                            \
+                break;                                                                     \
+            default:                                                                       \
+                break;                                                                     \
+            }                                                                              \
+        }                                                                                  \
+    }                                                                                      \
+    static void func##_item_create(void)                                                   \
+    {                                                                                      \
+        num = sizeof(handle) / sizeof(handle[0]);                                          \
+        page_num = num / SETTING_PAGE_MAX_ITEM;                                            \
+        int start = (curr_page * SETTING_PAGE_MAX_ITEM);                                   \
+        int end = start + SETTING_PAGE_MAX_ITEM;                                           \
+        if (end > num)                                                                     \
+            end = num;                                                                     \
+        for (int i = start; i < end; i++)                                                  \
+        {                                                                                  \
+            ui_setting_handle *h = &handle[i];                                             \
+                                                                                           \
+            h->obj = lv_obj_class_create_obj(&lv_list_btn_class, list);                    \
+            lv_obj_class_init_obj(h->obj);                                                 \
+            lv_obj_set_size(h->obj, LV_PCT(100), LV_SIZE_CONTENT);                         \
+                                                                                           \
+            lv_obj_t *label = lv_label_create(h->obj);                                     \
+            lv_label_set_text(label, h->name);                                             \
+            lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);                  \
+            lv_obj_align(label, LV_ALIGN_LEFT_MID, 10, 0);                                 \
+                                                                                           \
+            lv_obj_set_height(h->obj, 85);                                                 \
+            lv_obj_set_style_text_font(h->obj, &Font_Mono_Bold_30, LV_PART_MAIN);          \
+            lv_obj_set_style_bg_color(h->obj, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);   \
+            lv_obj_set_style_text_color(h->obj, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN); \
+            lv_obj_set_style_border_width(h->obj, 3, LV_PART_MAIN | LV_STATE_DEFAULT);     \
+            lv_obj_set_style_border_width(h->obj, 3, LV_PART_MAIN | LV_STATE_PRESSED);     \
+            lv_obj_set_style_outline_width(h->obj, 3, LV_PART_MAIN | LV_STATE_PRESSED);    \
+            lv_obj_set_style_radius(h->obj, 30, LV_PART_MAIN | LV_STATE_DEFAULT);          \
+            lv_obj_add_event_cb(h->obj, func##_scr_event, LV_EVENT_CLICKED, (void *)h);   \
+                                                                                           \
+            switch (h->type)                                                               \
+            {                                                                              \
+            case UI_SETTING_TYPE_SW:                                                       \
+                h->st = lv_label_create(h->obj);                                           \
+                lv_obj_set_style_text_font(h->st, &Font_Mono_Bold_30, LV_PART_MAIN);       \
+                lv_obj_align(h->st, LV_ALIGN_RIGHT_MID, 0, 0);                             \
+                lv_label_set_text_fmt(h->st, "%s", h->get_cb(NULL));                       \
+                break;                                                                     \
+            case UI_SETTING_TYPE_SUB:                                                      \
+                break;                                                                     \
+            default:                                                                       \
+                break;                                                                     \
+            }                                                                              \
+        }                                                                                  \
+    }
+
+#define UI_LIST_BTN_CREATE(func, list, page, num, page_num, curr_page) \
+    static void func##_page_switch_cb(lv_event_t *e)                   \
+    {                                                                  \
+        char opt = (int)e->user_data;                                  \
+                                                                       \
+        if (num < SETTING_PAGE_MAX_ITEM)                               \
+            return;                                                    \
+                                                                       \
+        int child_cnt = lv_obj_get_child_cnt(list);                    \
+                                                                       \
+        for (int i = 0; i < child_cnt; i++)                            \
+        {                                                              \
+            lv_obj_t *child = lv_obj_get_child(list, 0);               \
+            if (child)                                                 \
+                lv_obj_del(child);                                     \
+        }                                                              \
+                                                                       \
+        if (opt == 'p')                                                \
+        {                                                              \
+            curr_page = (curr_page < page_num) ? curr_page + 1 : 0;    \
+        }                                                              \
+        else if (opt == 'n')                                           \
+        {                                                              \
+            curr_page = (curr_page > 0) ? curr_page - 1 : page_num;    \
+        }                                                              \
+                                                                       \
+        func##_item_create();                                          \
+        lv_label_set_text_fmt(page, "%d / %d", curr_page, page_num);   \
+    }
+
+/* clang-format off */
+void ui_list_btn_create(lv_obj_t *parent, lv_event_cb_t event_cb)
+{
+    lv_obj_t * ui_Button2 = lv_btn_create(parent);
+    lv_obj_set_width(ui_Button2, 90);
+    lv_obj_set_height(ui_Button2, 45);
+    lv_obj_align(ui_Button2, LV_ALIGN_BOTTOM_MID, -140, -30);
+    // lv_obj_set_align(ui_Button2, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_Button2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_Button2, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_Button2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_Button2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Button2, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui_Button2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(ui_Button2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Button2, 0, LV_PART_MAIN | LV_STATE_CHECKED | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_width(ui_Button2, 0, LV_PART_MAIN | LV_STATE_CHECKED | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_spread(ui_Button2, 0, LV_PART_MAIN | LV_STATE_CHECKED | LV_STATE_PRESSED);
+    lv_obj_set_style_radius(ui_Button2, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t * ui_Label1 = lv_label_create(ui_Button2);
+    lv_obj_set_width(ui_Label1, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label1, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_Label1, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label1, "Back");
+    lv_obj_set_style_text_color(ui_Label1, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t * ui_Button14 = lv_btn_create(parent);
+    lv_obj_set_width(ui_Button2, 90);
+    lv_obj_set_height(ui_Button2, 45);
+    lv_obj_align(ui_Button14, LV_ALIGN_BOTTOM_MID, 140, -30);
+    // lv_obj_set_align(ui_Button14, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_Button14, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_Button14, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_Button14, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_Button14, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Button14, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui_Button14, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(ui_Button14, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Button14, 0, LV_PART_MAIN | LV_STATE_CHECKED | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_width(ui_Button14, 0, LV_PART_MAIN | LV_STATE_CHECKED | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_spread(ui_Button14, 0, LV_PART_MAIN | LV_STATE_CHECKED | LV_STATE_PRESSED);
+    lv_obj_set_style_radius(ui_Button14, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t * ui_Label15 = lv_label_create(ui_Button14);
+    lv_obj_set_width(ui_Label15, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label15, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_Label15, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label15, "Next");
+    lv_obj_set_style_text_color(ui_Label15, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label15, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_add_event_cb(ui_Button2, event_cb, LV_EVENT_CLICKED, (void*)'n');
+    lv_obj_add_event_cb(ui_Button14, event_cb, LV_EVENT_CLICKED, (void*)'p');
+}
+
 #endif
 //************************************[ screen 0 ]****************************************** menu
 #if 1
@@ -766,7 +929,121 @@ static scr_lifecycle_t screen3 = {
 };
 #endif
 //************************************[ screen 4 ]****************************************** setting
+// --------------------- screen 2.1 --------------------- About System
 #if 1
+static void scr4_1_btn_event_cb(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        scr_mgr_pop(false);
+    }
+}
+
+static void create4_1(lv_obj_t *parent) 
+{
+    lv_obj_t *info = lv_label_create(parent);
+    lv_obj_set_width(info, LV_HOR_RES * 0.9);
+    lv_obj_set_style_text_color(info, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
+    lv_obj_set_style_text_font(info, &Font_Mono_Bold_30, LV_PART_MAIN);
+    lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_long_mode(info, LV_LABEL_LONG_WRAP);
+    lv_label_set_text_fmt(info, "                           \n"
+                                "Version:        %s\n"
+                                "                           \n"
+                                "Version:               v1.0\n"
+                                "                           \n"
+                                "Version:               v1.0\n"
+                                "                           \n"
+                                "Version:               v1.0\n"
+                                "                           \n"
+                                "Version:               v1.0\n"
+                                "                           \n"
+                                "Version:               v1.0\n"
+                                "                           \n"
+                                "Version:               v1.0\n"
+                                "                           \n"
+                                "Version:               v3.0\n"
+                                "                           \n"
+                                ,
+                                "v1.0-241205"
+                                );
+    // String str = "";
+
+    // str += "                           \n";
+    // str += line_full_format(28, "Version:", ui_setting_get_sf_ver());
+    // str += "\n                           \n";
+    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
+    // str += "\n                           \n";
+    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
+    // str += "\n                           \n";
+    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
+    // str += "\n                           \n";
+    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
+    // str += "\n                           \n";
+    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
+
+    // lv_label_set_text_fmt(info, "%s", str.c_str());
+    
+    lv_obj_align(info, LV_ALIGN_TOP_MID, 0, 50);
+    
+    scr_back_btn_create(parent, ("About System"), scr4_1_btn_event_cb);
+}
+static void entry4_1(void) 
+{
+}
+static void exit4_1(void) {
+}
+static void destroy4_1(void) { }
+
+static scr_lifecycle_t screen4_1 = {
+    .create = create4_1,
+    .entry = entry4_1,
+    .exit  = exit4_1,
+    .destroy = destroy4_1,
+};
+#endif
+// --------------------- screen --------------------- Setting
+#if 1
+static lv_obj_t *setting_list;
+static lv_obj_t *setting_page;
+static int setting_num = 0;
+static int setting_page_num = 0;
+static int setting_curr_page = 0;
+
+void set_cb(int n){}
+
+const char *get_cb(int *ret_n) 
+{ 
+    return "OFF";
+}
+
+static ui_setting_handle setting_handle_list[] = {
+    {.name="Backlight",     .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_backlight,     .get_cb=ui_setting_get_backlight},
+    {.name="Refresh Speed", .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_refresh_speed, .get_cb=ui_setting_get_refresh_speed},
+    {.name="-About System", .type=UI_SETTING_TYPE_SUB, .set_cb=set_cb,                       .get_cb=get_cb,                      .sub_id=SCREEN4_1_ID},
+};
+
+/**
+ * func:      setting
+ * handle:    setting_handle_list
+ * list:      setting_list
+ * num:       setting_num
+ * page_num:  setting_page_num
+ * curr_page: setting_curr_page
+ */
+// #define UI_LIST_CREATE(func, handle, list, num, page_num, curr_page) 
+UI_LIST_CREATE(setting, setting_handle_list, setting_list, setting_num, setting_page_num, setting_curr_page)
+
+/**
+ * func:      setting
+ * list:      setting_list
+ * page:      setting_page
+ * num:       setting_num
+ * page_num:  setting_page_num
+ * curr_page: setting_curr_page
+ */
+// #define UI_LIST_BTN_CREATE(func, list, page, num, page_num, curr_page) 
+UI_LIST_BTN_CREATE(setting, setting_list, setting_page, setting_num, setting_page_num, setting_curr_page) 
+
 static void scr4_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED) {
@@ -777,6 +1054,30 @@ static void scr4_btn_event_cb(lv_event_t * e)
 
 static void create4(lv_obj_t *parent) 
 {
+    setting_list = lv_list_create(parent);
+    lv_obj_set_size(setting_list, lv_pct(93), lv_pct(91));
+    lv_obj_align(setting_list, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(setting_list, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_style_pad_top(setting_list, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(setting_list, 10, LV_PART_MAIN);
+    lv_obj_set_style_radius(setting_list, 0, LV_PART_MAIN);
+    // lv_obj_set_style_outline_pad(setting_list, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_width(setting_list, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_color(setting_list, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(setting_list, 0, LV_PART_MAIN);
+
+    setting_item_create();
+
+    if(setting_page_num > 0)
+        ui_list_btn_create(parent, setting_page_switch_cb);
+
+    setting_page = lv_label_create(parent);
+    lv_obj_set_width(setting_page, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(setting_page, LV_SIZE_CONTENT);    /// 1
+    lv_obj_align(setting_page, LV_ALIGN_BOTTOM_MID, 0, -30);
+    lv_label_set_text_fmt(setting_page, "%d / %d", setting_curr_page, setting_page_num);
+    lv_obj_set_style_text_color(setting_page, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(setting_page, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // back
     scr_back_btn_create(parent, "Setting", scr4_btn_event_cb);
@@ -1201,6 +1502,7 @@ void ui_entry(void)
     scr_mgr_register(SCREEN2_ID, &screen2); // lora
     scr_mgr_register(SCREEN3_ID, &screen3); // sd card
     scr_mgr_register(SCREEN4_ID, &screen4); // setting
+    scr_mgr_register(SCREEN4_1_ID, &screen4_1); // setting
     scr_mgr_register(SCREEN5_ID, &screen5); // test
     scr_mgr_register(SCREEN6_ID, &screen6); // wifi
     scr_mgr_register(SCREEN7_ID, &screen7); // battery
