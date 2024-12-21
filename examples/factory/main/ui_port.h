@@ -22,6 +22,7 @@ LV_FONT_DECLARE(Font_Geist_Bold_20)
 
 void ui_full_refresh(void);
 void ui_full_clean(void);
+void ui_set_rotation(lv_disp_rot_t rot);
 
 // clock
 void ui_clock_get_time(uint8_t *h, uint8_t *m, uint8_t *s);
@@ -56,10 +57,39 @@ String ui_wifi_get_ip(void);
 const char *ui_wifi_get_ssid(void);
 const char *ui_wifi_get_pwd(void);
 
+// battery
+/* 25896 */
+void battery_chg_encharge(void);
+void battery_chg_discharge(void);
+bool battery_25896_is_vaild(void);
+bool battery_25896_is_chr(void);
+void battery_25896_refr(void);
+const char * battery_25896_get_CHG_ST(void);
+const char * battery_25896_get_VBUS_ST(void);
+const char * battery_25896_get_NTC_ST(void);
+float battery_25896_get_VBUS(void);
+float battery_25896_get_VSYS(void);
+float battery_25896_get_VBAT(void);
+float battery_25896_get_targ_VOLT(void);
+float battery_25896_get_CHG_CURR(void);
+float battery_25896_get_PREC_CURR(void);
+/* 27220 */
+bool battery_27220_is_vaild(void);
+bool battery_27220_is_chr(void);
+float battery_27220_get_VOLT(void);
+float battery_27220_get_VOLT_CHG(void);
+float battery_27220_get_CURR_ARG(void);
+float battery_27220_get_CURR_INS(void);
+float battery_27220_get_CURR_STD(void);
+float battery_27220_get_CURR_CHG(void);
+float battery_27220_get_TEMP(void);
+float battery_27220_get_BATT_CAP(void);
+float battery_27220_get_BATT_CAP_FULL(void);
+
 // shutdown
 void ui_shutdown(void);
 
-
+void ui_sleep(void);
 
 
 

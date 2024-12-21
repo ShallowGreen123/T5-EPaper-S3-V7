@@ -10,13 +10,47 @@
 #include <SensorPCF8563.hpp>
 #include <WiFi.h>
 #include <esp_sntp.h>
-// #include <RadioLib.h>
+#include <RadioLib.h>
 #include <FS.h>
 #include <SPI.h>
 #include <SD.h>
 #include <EEPROM.h>
 // #include "bq27220.h"
+#define XPOWERS_CHIP_BQ25896
 #include <XPowersLib.h>
+
+
+
+// peripheral
+// |        RTC (PCF8563)         |
+// | :--------------------------: |
+// |        BQ25896 (MPU)         |
+// |     BQ27220 (Coulometer)     |
+// |           SD Card            |
+// |        GT911 (Tocuh)         |
+// |     PCA9535 (IO extend)      |
+// | TPS651851 (Ink Screen Power) |
+// |        Lora (SX1262)         |
+// |             GPS              |
+enum {
+    E_PERI_INK_POWER = 0,
+    E_PERI_BQ25896,
+    E_PERI_BQ27220,
+    E_PERI_RTC,
+    E_PERI_SD_CARD,
+    E_PERI_TOUCH,
+    E_PERI_LORA,
+    E_PERI_GPS,
+    E_PERI_MAX,
+};
+
+extern bool peri_buf[E_PERI_MAX];
+
+// lora
+extern SX1262 radio;
+
+// bq25896
+extern XPowersPPM PPM;
 
 // display refresh mode
 #define REFRESH_MODE_FAST   0

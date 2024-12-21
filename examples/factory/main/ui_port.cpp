@@ -2,10 +2,11 @@
 #include "Arduino.h"
 #include "main.h"
 #include "utilities.h"
+#include "epdiy.h"
 
 #define T5_EPER_S3_SF_VER "v1.0 24.12.03"
 
-int ui_setting_backlight = 0;
+int ui_setting_backlight = 2;
 
 //************************************[ Other fun ]******************************************
 
@@ -17,6 +18,28 @@ void ui_full_refresh(void)
 void ui_full_clean(void)
 {
     disp_full_clean();
+}
+
+void ui_set_rotation(lv_disp_rot_t rot)
+{
+    // EPD_ROT_LANDSCAPE = 0,
+    // EPD_ROT_PORTRAIT = 1,
+    // EPD_ROT_INVERTED_LANDSCAPE = 2,
+    // EPD_ROT_INVERTED_PORTRAIT = 3,
+    switch (rot)
+    {
+        case LV_DISP_ROT_NONE: epd_set_rotation(EPD_ROT_INVERTED_PORTRAIT);  break;
+        case LV_DISP_ROT_90:   epd_set_rotation(EPD_ROT_INVERTED_LANDSCAPE); break;
+        case LV_DISP_ROT_180:  epd_set_rotation(EPD_ROT_PORTRAIT);           break;
+        case LV_DISP_ROT_270:  epd_set_rotation(EPD_ROT_LANDSCAPE);          break;
+        default:
+            break;
+    }
+    // LV_DISP_ROT_NONE = 0,
+    // LV_DISP_ROT_90,
+    // LV_DISP_ROT_180,
+    // LV_DISP_ROT_270
+    lv_disp_set_rotation(lv_disp_get_default(), rot);
 }
 
 //************************************[ screen 1 ]****************************************** clock
@@ -184,16 +207,174 @@ const char *ui_wifi_get_pwd(void)
     return "WIFI not connected";
 }
 //************************************[ screen 7 ]****************************************** battery
+#if 1
 /* 25896 */
+void battery_chg_encharge(void)
+{
+    PPM.enableCharge();
+}
+
+void battery_chg_discharge(void)
+{
+    PPM.disableCharge();
+}
+
+bool battery_25896_is_vaild(void)
+{
+    // return bq25896_is_init;
+    return 1;
+}
+
+bool battery_25896_is_chr(void)
+{
+    if(PPM.isVbusIn() == false) {
+        return false;
+    } else {
+        return true;
+    }
+    return 0;
+}
+
+void battery_25896_refr(void)
+{
+}
+
+const char * battery_25896_get_CHG_ST(void)
+{
+    return PPM.getChargeStatusString();
+    // return 0;
+}
+const char * battery_25896_get_VBUS_ST(void) 
+{
+    return PPM.getBusStatusString();
+    return 0;
+}
+const char * battery_25896_get_NTC_ST(void)
+{
+    return PPM.getNTCStatusString();
+    // return 0;
+}
+float battery_25896_get_VBUS(void)
+{
+    return (PPM.getVbusVoltage() *1.0 / 1000.0 );
+    // return 0;
+}
+float battery_25896_get_VSYS(void) 
+{
+    return (PPM.getSystemVoltage() * 1.0 / 1000.0);
+    // return 0;
+}
+float battery_25896_get_VBAT(void)
+{
+    return (PPM.getBattVoltage() * 1.0 / 1000.0);
+    // return 0;
+}
+float battery_25896_get_targ_VOLT(void)
+{
+    return (PPM.getChargeTargetVoltage() * 1.0 / 1000.0);
+    // return 0;
+}
+float battery_25896_get_CHG_CURR(void)
+{
+    return (PPM.getChargeCurrent());
+    // return 0;
+}
+float battery_25896_get_PREC_CURR(void)
+{
+    return (PPM.getPrechargeCurr());
+    // return 0;
+}
 
 /* 27220 */
+bool battery_27220_is_vaild(void)
+{
+    // return bq27220_is_init;
+    return 0;
+}
 
-//
-//************************************[ screen 8 ]****************************************** battery
+bool battery_27220_is_chr(void)
+{
+    // return bq27220.getIsCharging();
+    return 0;
+}
+
+float battery_27220_get_VOLT(void)
+{
+    // return bq27220.getVolt(VOLT);
+    return 0;
+}
+float battery_27220_get_VOLT_CHG(void)
+{
+    // return bq27220.getVolt(VOLT_CHARGING);
+    return 0;
+}
+float battery_27220_get_CURR_ARG(void)
+{
+    // return bq27220.getCurr(CURR_AVERAGE);
+    return 0;
+}
+float battery_27220_get_CURR_INS(void)
+{
+    // return bq27220.getCurr(CURR_INSTANT);
+    return 0;
+}
+float battery_27220_get_CURR_STD(void)
+{
+    // return bq27220.getCurr(CURR_STANDBY);
+    return 0;
+}
+float battery_27220_get_CURR_CHG(void)
+{
+    // return bq27220.getCurr(CURR_CHARGING);
+    return 0;
+}
+float battery_27220_get_TEMP(void)
+{
+    // return (float)(bq27220.getTemp() / 10 - 273); // 摄氏度
+    return 0;
+}
+float battery_27220_get_BATT_CAP(void)
+{
+    // return bq27220.getRemainCap();
+    return 0;
+}
+float battery_27220_get_BATT_CAP_FULL(void)
+{
+    // return bq27220.getFullChargeCap();
+    return 0;
+}
+
+#endif
+//************************************[ screen 8 ]****************************************** shutdown
 
 void ui_shutdown(void)
 {
+    PPM.shutdown();
+}
 
+void ui_sleep(void)
+{
+    touch.sleep();
+    radio.sleep();
+
+    digitalWrite(TOUCH_RST, LOW); 
+    digitalWrite(LORA_RST, LOW); 
+
+    pinMode(9, OUTPUT);
+    digitalWrite(9, LOW); 
+    
+    gpio_hold_en((gpio_num_t)TOUCH_RST);
+    gpio_hold_en((gpio_num_t)LORA_RST);
+    gpio_hold_en((gpio_num_t)9);
+    gpio_deep_sleep_hold_en();
+
+    analogWrite(BL_EN, 0);
+
+    epd_poweroff();
+
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)BOOT_BTN, 0);
+    // esp_sleep_enable_ext1_wakeup((1UL << KEY_BTN), ESP_EXT1_WAKEUP_ANY_LOW); 
+    esp_deep_sleep_start();
 }
 
 //************************************[ home btn ]******************************************

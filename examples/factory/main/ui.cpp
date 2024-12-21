@@ -38,22 +38,27 @@ void scr_back_btn_create(lv_obj_t *parent, const char *text, lv_event_cb_t cb)
     lv_obj_set_ext_click_area(label, 30);
 }
 
-// void scr_middle_line(lv_obj_t *parent)
-// {
-//     static lv_point_t line_points[] = { {LCD_HOR_SIZE/2, 0}, {LCD_HOR_SIZE/2, LCD_VER_SIZE-150}};
-//     /*Create style*/
-//     static lv_style_t style_line;
-//     lv_style_init(&style_line);
-//     lv_style_set_line_width(&style_line, 2);
-//     lv_style_set_line_color(&style_line, lv_color_black());
-//     lv_style_set_line_rounded(&style_line, true);
-//     /*Create a line and apply the new style*/
-//     lv_obj_t * line1;
-//     line1 = lv_line_create(parent);
-//     lv_line_set_points(line1, line_points, 2);     /*Set the points*/
-//     lv_obj_add_style(line1, &style_line, 0);
-//     lv_obj_set_align(line1, LV_ALIGN_LEFT_MID);
-// }
+void scr_middle_line(lv_obj_t *parent)
+{
+    static lv_point_t line_points[2] = {0};
+    line_points[0].x = LCD_HOR_SIZE / 2;
+    line_points[0].y = 0;
+    line_points[1].x = LCD_HOR_SIZE / 2;
+    line_points[1].y = LCD_VER_SIZE - 150;
+
+    /*Create style*/
+    static lv_style_t style_line;
+    lv_style_init(&style_line);
+    lv_style_set_line_width(&style_line, 2);
+    lv_style_set_line_color(&style_line, lv_color_black());
+    lv_style_set_line_rounded(&style_line, true);
+    /*Create a line and apply the new style*/
+    lv_obj_t * line1;
+    line1 = lv_line_create(parent);
+    lv_line_set_points(line1, line_points, 2);     /*Set the points*/
+    lv_obj_add_style(line1, &style_line, 0);
+    lv_obj_set_align(line1, LV_ALIGN_LEFT_MID);
+}
 
 /* clang-format on */
 #define SETTING_PAGE_MAX_ITEM 7
@@ -1317,8 +1322,14 @@ static void create6(lv_obj_t *parent) {
     // back
     scr_back_btn_create(parent, "Wifi", scr6_btn_event_cb);
 }
-static void entry6(void) { }
-static void exit6(void) { }
+static void entry6(void) 
+{
+    ui_set_rotation(LV_DISP_ROT_270);
+}
+static void exit6(void) 
+{
+    ui_set_rotation(LV_DISP_ROT_NONE);
+}
 static void destroy6(void) { }
 
 static scr_lifecycle_t screen6 = {
@@ -1342,7 +1353,11 @@ const char * __attribute__((weak)) ui_if_epd_get_WIFI_pwd(void) {
 #endif
 //************************************[ screen 7 ]****************************************** battery
 #if 1
-
+static lv_obj_t *scr7_cont_letf;
+static lv_obj_t *scr7_cont_right;
+static lv_obj_t *batt_right[10] = {0};
+static lv_obj_t *batt_left[10] = {0};
+static lv_timer_t *batt_refr_timer = NULL;
 #define line_max 28
 
 static void battery_set_line(lv_obj_t *label, const char *str1, const char *str2)
@@ -1355,23 +1370,216 @@ static void battery_set_line(lv_obj_t *label, const char *str1, const char *str2
 static void scr7_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
-        // ui_full_refresh();
         scr_mgr_switch(SCREEN0_ID, false);
     }
 }
 
+static void battery_data_refr(void)
+{
+    char buf[line_max];
+    // BQ25896
+    if(battery_25896_is_vaild()) {
+        battery_25896_refr();
+
+        battery_set_line(batt_left[0], "Charge:", (battery_25896_is_chr() == true ? "Charging" : "Not charged"));
+
+        lv_snprintf(buf, line_max, "%.2fV", battery_25896_get_VBUS());
+        battery_set_line(batt_left[1], "VBUS:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fV", battery_25896_get_VSYS());
+        battery_set_line(batt_left[2], "VSYS:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fV", battery_25896_get_VBAT());
+        battery_set_line(batt_left[3], "VBAT:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fv", battery_25896_get_targ_VOLT());
+        battery_set_line(batt_left[4], "VOLT Target:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmA", battery_25896_get_CHG_CURR());
+        battery_set_line(batt_left[5], "Charge Curr:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmA", battery_25896_get_PREC_CURR());
+        battery_set_line(batt_left[6], "Precharge Curr:", buf);
+
+        lv_snprintf(buf, line_max, "%s", battery_25896_get_CHG_ST());
+        battery_set_line(batt_left[7], "CHG Status:", buf);
+
+        lv_snprintf(buf, line_max, "%s", battery_25896_get_VBUS_ST());
+        battery_set_line(batt_left[8], "VBUS Status:", buf);
+
+        lv_snprintf(buf, line_max, "%s", battery_25896_get_NTC_ST());
+        battery_set_line(batt_left[9], "NCT:", buf);
+
+    }
+
+    // BQ27220
+    if(battery_27220_is_vaild()) {
+        battery_set_line(batt_right[0], "Charge:", (battery_27220_is_chr() == true? "Charging" : "Not charged"));
+
+        lv_snprintf(buf, line_max, "%.2fV", battery_27220_get_VOLT()/1000);
+        battery_set_line(batt_right[1], "VOLT:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fV", battery_27220_get_VOLT_CHG()/1000);
+        battery_set_line(batt_right[2], "VOLT Charge:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_ARG());
+        battery_set_line(batt_right[3], "CURR Average:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_INS());
+        battery_set_line(batt_right[4], "CURR Instant:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_STD());
+        battery_set_line(batt_right[5], "Curr Standby:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_CHG());
+        battery_set_line(batt_right[6], "Curr Charging:", buf);
+
+        lv_snprintf(buf, line_max, "%.2f", battery_27220_get_TEMP());
+        battery_set_line(batt_right[7], "TEMP:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmAh", battery_27220_get_BATT_CAP());
+        battery_set_line(batt_right[8], "CAP BATT:", buf);
+
+        lv_snprintf(buf, line_max, "%.2fmAh", battery_27220_get_BATT_CAP_FULL());
+        battery_set_line(batt_right[9], "CAP BATT Full:", buf);
+
+        if(battery_27220_get_TEMP() > 45.0){
+            battery_chg_discharge();
+        } else {
+            battery_chg_encharge();
+        }
+    }
+}
+
+static void batt_refr_timer_event(lv_timer_t *t)
+{
+    battery_data_refr();
+    // ui_epd_refr(EPD_REFRESH_TIME, 2, 2);
+}
+
+static lv_obj_t * scr7_create_label(lv_obj_t *parent)
+{
+    lv_obj_t *label = lv_label_create(parent);
+    lv_obj_set_width(label, LCD_HOR_SIZE/2-50);
+    lv_obj_set_style_text_font(label, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_obj_set_style_border_width(label, 1, LV_PART_MAIN);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_border_side(label, LV_BORDER_SIDE_BOTTOM, LV_PART_MAIN);
+    return label;
+}
+
 static void create7(lv_obj_t *parent)
 {
+    ui_set_rotation(LV_DISP_ROT_270);
+
+    lv_obj_t *label;
+
+    // left cont
+    scr7_cont_letf = lv_obj_create(parent);
+    lv_obj_set_size(scr7_cont_letf, lv_pct(49), lv_pct(85));
+    lv_obj_set_style_bg_color(scr7_cont_letf, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(scr7_cont_letf, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(scr7_cont_letf, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_border_width(scr7_cont_letf, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(scr7_cont_letf, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_hor(scr7_cont_letf, 20, LV_PART_MAIN);
+    lv_obj_set_flex_flow(scr7_cont_letf, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(scr7_cont_letf, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(scr7_cont_letf, 5, LV_PART_MAIN);
+    lv_obj_set_align(scr7_cont_letf, LV_ALIGN_BOTTOM_LEFT);
+
+    // left
+    if(!battery_25896_is_vaild()) {
+        label = scr7_create_label(scr7_cont_letf);
+        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_label_set_text_fmt(label, "%s", "[0x6B] BQ25896 NOT FOUND");
+        goto NO_BATTERY_BQ25896;
+    }
+
+    label = scr7_create_label(scr7_cont_letf);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_label_set_text_fmt(label, "%s", "[0x6B] BQ25896");
+
+    for(int i = 0; i < sizeof(batt_left) / sizeof(batt_left[0]); i++) {
+        batt_left[i] = scr7_create_label(scr7_cont_letf);
+    }
+
+    battery_set_line(batt_left[0], "Charge:", "---");
+    battery_set_line(batt_left[1], "VBUS:", "---");
+    battery_set_line(batt_left[2], "VBUS Status:", "---");
+    battery_set_line(batt_left[3], "VSYS:", "---");
+    battery_set_line(batt_left[4], "VSYS Status:", "---");
+    battery_set_line(batt_left[5], "VBAT:", "---");
+    battery_set_line(batt_left[6], "ICHG:", "---");
+    battery_set_line(batt_left[7], "TEMP:", "---");
+    battery_set_line(batt_left[8], "TSPCT:", "---");
+    battery_set_line(batt_left[9], "Charger Err:", "---");
+
+    // right cont
+NO_BATTERY_BQ25896:
+
+    scr7_cont_right = lv_obj_create(parent);
+    lv_obj_set_size(scr7_cont_right, lv_pct(49), lv_pct(85));
+    lv_obj_set_style_bg_color(scr7_cont_right, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(scr7_cont_right, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(scr7_cont_right, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_border_width(scr7_cont_right, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(scr7_cont_right, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_hor(scr7_cont_right, 10, LV_PART_MAIN);
+    lv_obj_set_flex_flow(scr7_cont_right, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(scr7_cont_right, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(scr7_cont_right, 5, LV_PART_MAIN);
+    lv_obj_set_align(scr7_cont_right, LV_ALIGN_BOTTOM_RIGHT);
+
+    // right
+    if(!battery_27220_is_vaild()) {
+        label = scr7_create_label(scr7_cont_right);
+        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        lv_label_set_text_fmt(label, "%s", "[0x55] BQ27220 NOT FOUND");
+        goto NO_BATTERY;
+    }
+    label = scr7_create_label(scr7_cont_right);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_label_set_text_fmt(label, "%s", "[0x55] BQ27220");
+
+    for(int i = 0; i < sizeof(batt_right) / sizeof(batt_right[0]); i++) {
+        batt_right[i] = scr7_create_label(scr7_cont_right);
+    }
+
+    battery_set_line(batt_right[0], "Charge:", "---");
+    battery_set_line(batt_right[1], "VOLT:", "---");
+    battery_set_line(batt_right[2], "VOLT Charge:", "---");
+    battery_set_line(batt_right[3], "CURR Average:", "---");
+    battery_set_line(batt_right[4], "CURR Instant:", "---");
+    battery_set_line(batt_right[5], "Curr Standby:", "---");
+    battery_set_line(batt_right[6], "Curr Charging:", "---");
+    battery_set_line(batt_right[7], "TEMP:", "---");
+    battery_set_line(batt_right[8], "CAP BATT:", "---");
+    battery_set_line(batt_right[9], "CAP BATT Full:", "---");
+
+NO_BATTERY:
+    //---------------------
+    scr_middle_line(parent);
     // back
     scr_back_btn_create(parent, "battery", scr7_btn_event_cb);
+    // timer
+    batt_refr_timer = lv_timer_create(batt_refr_timer_event, 15000, NULL);
+    lv_timer_pause(batt_refr_timer);
 }
 
 static void entry7(void) {
+    battery_data_refr();
+    lv_timer_resume(batt_refr_timer);
 }
 static void exit7(void) {
+    lv_timer_pause(batt_refr_timer);
 }
 static void destroy7(void) { 
-
+    lv_timer_del(batt_refr_timer);
+    if(batt_refr_timer){
+        batt_refr_timer = NULL;
+    }
+    ui_set_rotation(LV_DISP_ROT_NONE);
 }
 
 static scr_lifecycle_t screen7 = {
@@ -1415,7 +1623,7 @@ static void create8(lv_obj_t *parent)
     // lv_coord_t w = lv_txt_get_width(str1, strlen(str1), &Font_Mono_Bold_20, 0, false);
     // lv_obj_set_style_transform_pivot_x(label, w / 2, 0);
 
-    // back
+    // back 
     scr_back_btn_create(parent, "Shoutdown", scr8_btn_event_cb);
 
     lv_timer_create(scr8_shutdown_timer_event, 3000, NULL);
@@ -1435,6 +1643,51 @@ static scr_lifecycle_t screen8 = {
     .entry = entry8,
     .exit  = exit8,
     .destroy = destroy8,
+};
+#endif
+//************************************[ screen 8 ]****************************************** shutdown
+#if 1
+static void scr9_btn_event_cb(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        // ui_full_refresh();
+        scr_mgr_switch(SCREEN0_ID, false);
+    }
+}
+
+static void scr9_shutdown_timer_event(lv_timer_t *t)
+{
+    lv_timer_del(t);
+    ui_sleep();
+}
+
+static void create9(lv_obj_t *parent)
+{
+
+    // lv_obj_t * img = lv_img_create(parent);
+    // lv_img_set_src(img, &img_start);
+    // lv_obj_center(img);
+
+    // back 
+    scr_back_btn_create(parent, "Sleep", scr9_btn_event_cb);
+
+    lv_timer_create(scr9_shutdown_timer_event, 3000, NULL);
+}
+
+static void entry9(void) {
+    
+}
+static void exit9(void) {
+}
+static void destroy9(void) { 
+
+}
+
+static scr_lifecycle_t screen9 = {
+    .create = create9,
+    .entry = entry9,
+    .exit  = exit9,
+    .destroy = destroy9,
 };
 #endif
 //************************************[ UI ENTRY ]******************************************
@@ -1464,7 +1717,7 @@ static void indev_get_gesture_dir(lv_timer_t *t)
         diff_x = last_point.x - data.point.x;
         diff_y = last_point.x - data.point.y;
 
-        Serial.printf("[ui indev] x=%d, y=%d, diffx=%d\n", data.point.x, data.point.y, diff_x);
+        // Serial.printf("[ui indev] x=%d, y=%d, diffx=%d\n", data.point.x, data.point.y, diff_x);
 
         if(diff_x > UI_SLIDING_DISTANCE) { // right
             if(ui_get_gesture_dir) {
@@ -1507,7 +1760,7 @@ void ui_entry(void)
     scr_mgr_register(SCREEN6_ID, &screen6); // wifi
     scr_mgr_register(SCREEN7_ID, &screen7); // battery
     scr_mgr_register(SCREEN8_ID, &screen8); // shutdown
-    // scr_mgr_register(SCREEN9_ID, &screen9); // battery
+    scr_mgr_register(SCREEN9_ID, &screen9); // sleep
 
     scr_mgr_switch(SCREEN0_ID, false); // set root screen
     scr_mgr_set_anim(LV_SCR_LOAD_ANIM_NONE, LV_SCR_LOAD_ANIM_NONE, LV_SCR_LOAD_ANIM_NONE);

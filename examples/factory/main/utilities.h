@@ -1,5 +1,10 @@
 #pragma once
 
+#define BOARD_GPS_RXD 44
+#define BOARD_GPS_TXD 43
+#define SerialMon Serial
+#define SerialGPS Serial2
+
 #define BOARD_SCL  (40)
 #define BOARD_SDA  (39)
 
