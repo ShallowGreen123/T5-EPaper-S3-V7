@@ -394,9 +394,10 @@ bool rtc_pcf8563_init(void)
 
     if (!rtc.begin(Wire, PCF8563_SLAVE_ADDRESS, RTC_SDA, RTC_SCL)) {
         Serial.println("Failed to find PCF8563 - check your wiring!");
-        while (1) {
-            delay(1000);
-        }
+        // while (1) {
+        //     delay(1000);
+        // }
+        return false;
     }
 
     uint16_t year = 2024;

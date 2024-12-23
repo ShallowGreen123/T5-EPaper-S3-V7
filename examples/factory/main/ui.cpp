@@ -1609,9 +1609,9 @@ static void scr8_shutdown_timer_event(lv_timer_t *t)
 static void create8(lv_obj_t *parent)
 {
 
-    lv_obj_t * img = lv_img_create(parent);
-    lv_img_set_src(img, &img_start);
-    lv_obj_center(img);
+    // lv_obj_t * img = lv_img_create(parent);
+    // lv_img_set_src(img, &img_start);
+    // lv_obj_center(img);
 
     // const char *str1 = "PWR: Press and hold to power on";
 

@@ -49,17 +49,24 @@ void ui_clock_get_time(uint8_t *h, uint8_t *m, uint8_t *s)
     // *m = timeinfo.tm_min;
     // *s = timeinfo.tm_sec;
 
-    RTC_DateTime datetime = rtc.getDateTime();
-    *h = datetime.hour;
-    *m = datetime.minute;
-    *s = datetime.second;
+    if(peri_buf[E_PERI_RTC] == true)
+    {
+        RTC_DateTime datetime = rtc.getDateTime();
+        *h = datetime.hour;
+        *m = datetime.minute;
+        *s = datetime.second;
+
+    } else
+    {
+        static int test_m = 19;
+        *h = 10;
+        *m = test_m++;
+        *s = 0;
+    }
 
     printf("h=%d, m=%d, s=%d\n", *h, *m, *s);
 
-    // static int test_m = 19;
-    // *h = 10;
-    // *m = test_m++;
-    // *s = 0;
+    
 }
 
 void ui_clock_get_data(uint8_t *year, uint8_t *month, uint8_t *day, uint8_t *week)
@@ -69,19 +76,21 @@ void ui_clock_get_data(uint8_t *year, uint8_t *month, uint8_t *day, uint8_t *wee
     // *day = timeinfo.tm_mday;
     // *week = timeinfo.tm_wday;
 
-    RTC_DateTime datetime = rtc.getDateTime();
-    *year = datetime.year % 100;
-    *month = datetime.month;
-    *day = datetime.day;
-    *week = datetime.week;
-
+    if(peri_buf[E_PERI_RTC] == true)
+    {
+        RTC_DateTime datetime = rtc.getDateTime();
+        *year = datetime.year % 100;
+        *month = datetime.month;
+        *day = datetime.day;
+        *week = datetime.week;
+    } else {
+        static int test_data = 18;
+        *year = 24;
+        *month = 12;
+        *day = test_data++;
+        *week = 2;
+    }
     printf("y=%d, m=%d, d=%d, w=%d\n", *year, *month, *day, *week);
-
-    // static int test_data = 18;
-    // *year = 24;
-    // *month = 12;
-    // *day = test_data++;
-    // *week = 2;
 }
 //************************************[ screen 2 ]****************************************** lora
 void ui_lora_set_mode(int mode)
