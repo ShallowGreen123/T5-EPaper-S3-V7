@@ -1563,7 +1563,7 @@ NO_BATTERY:
     // back
     scr_back_btn_create(parent, "battery", scr7_btn_event_cb);
     // timer
-    batt_refr_timer = lv_timer_create(batt_refr_timer_event, 15000, NULL);
+    batt_refr_timer = lv_timer_create(batt_refr_timer_event, 5000, NULL);
     lv_timer_pause(batt_refr_timer);
 }
 

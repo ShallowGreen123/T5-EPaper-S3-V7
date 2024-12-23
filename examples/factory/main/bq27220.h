@@ -7,8 +7,8 @@
 #include <Wire.h>
 #include "bq27220_def.h"
 
-#define DEFAULT_SCL  40
-#define DEFAULT_SDA  39
+#define BQ27220_DEFAULT_SCL  40
+#define BQ27220_DEFAULT_SDA  39
 
 enum CURR_MODE{
     CURR_RAW,
@@ -79,12 +79,12 @@ typedef struct BQ27220DMData BQ27220DMData;
 
 class BQ27220{
 public:
-    BQ27220() : addr{BQ27220_I2C_ADDRESS}, wire(&Wire), scl(DEFAULT_SCL), sda(DEFAULT_SDA)
+    BQ27220() : addr{BQ27220_I2C_ADDRESS}, wire(&Wire), scl(BQ27220_DEFAULT_SCL), sda(BQ27220_DEFAULT_SDA)
     {}
 
     bool begin()
     {
-        Wire.begin(DEFAULT_SDA, DEFAULT_SCL);
+        Wire.begin(BQ27220_DEFAULT_SDA, BQ27220_DEFAULT_SCL);
         return true;
     }
 
@@ -174,7 +174,7 @@ public:
     }
 
     bool reset(void);
-    bool init(const BQ27220DMData *data_memory);
+    bool init(void);
 
     // Sealed Access
     bool seal_access(void);

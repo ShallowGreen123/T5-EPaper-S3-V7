@@ -20,6 +20,7 @@ LV_FONT_DECLARE(Font_Mono_Bold_90)
 LV_FONT_DECLARE(Font_Geist_Light_20)
 LV_FONT_DECLARE(Font_Geist_Bold_20)
 
+void ui_refresh_set_mode(int mode);
 void ui_full_refresh(void);
 void ui_full_clean(void);
 void ui_set_rotation(lv_disp_rot_t rot);

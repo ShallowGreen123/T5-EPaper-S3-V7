@@ -6,9 +6,14 @@
 
 #define T5_EPER_S3_SF_VER "v1.0 24.12.03"
 
-int ui_setting_backlight = 2;
+int ui_setting_backlight = 3;  // 0 - 3
 
 //************************************[ Other fun ]******************************************
+
+void ui_refresh_set_mode(int mode)
+{
+    disp_refresh_set_mode(mode);
+}
 
 void ui_full_refresh(void)
 {
@@ -65,8 +70,6 @@ void ui_clock_get_time(uint8_t *h, uint8_t *m, uint8_t *s)
     }
 
     printf("h=%d, m=%d, s=%d\n", *h, *m, *s);
-
-    
 }
 
 void ui_clock_get_data(uint8_t *year, uint8_t *month, uint8_t *day, uint8_t *week)
@@ -230,8 +233,8 @@ void battery_chg_discharge(void)
 
 bool battery_25896_is_vaild(void)
 {
-    // return bq25896_is_init;
-    return 1;
+    return peri_buf[E_PERI_BQ25896];
+    // return 1;
 }
 
 bool battery_25896_is_chr(void)
@@ -297,60 +300,60 @@ float battery_25896_get_PREC_CURR(void)
 /* 27220 */
 bool battery_27220_is_vaild(void)
 {
-    // return bq27220_is_init;
-    return 0;
+    return peri_buf[E_PERI_BQ27220];
+    // return 0;
 }
 
 bool battery_27220_is_chr(void)
 {
-    // return bq27220.getIsCharging();
-    return 0;
+    return bq27220.getIsCharging();
+    // return 0;
 }
 
 float battery_27220_get_VOLT(void)
 {
-    // return bq27220.getVolt(VOLT);
-    return 0;
+    return bq27220.getVolt(VOLT);
+    // return 0;
 }
 float battery_27220_get_VOLT_CHG(void)
 {
-    // return bq27220.getVolt(VOLT_CHARGING);
-    return 0;
+    return bq27220.getVolt(VOLT_CHARGING);
+    // return 0;
 }
 float battery_27220_get_CURR_ARG(void)
 {
-    // return bq27220.getCurr(CURR_AVERAGE);
-    return 0;
+    return bq27220.getCurr(CURR_AVERAGE);
+    // return 0;
 }
 float battery_27220_get_CURR_INS(void)
 {
-    // return bq27220.getCurr(CURR_INSTANT);
-    return 0;
+    return bq27220.getCurr(CURR_INSTANT);
+    // return 0;
 }
 float battery_27220_get_CURR_STD(void)
 {
-    // return bq27220.getCurr(CURR_STANDBY);
-    return 0;
+    return bq27220.getCurr(CURR_STANDBY);
+    // return 0;
 }
 float battery_27220_get_CURR_CHG(void)
 {
-    // return bq27220.getCurr(CURR_CHARGING);
-    return 0;
+    return bq27220.getCurr(CURR_CHARGING);
+    // return 0;
 }
 float battery_27220_get_TEMP(void)
 {
-    // return (float)(bq27220.getTemp() / 10 - 273); // 摄氏度
-    return 0;
+    return (float)(bq27220.getTemp() / 10 - 273); // 摄氏度
+    // return 0;
 }
 float battery_27220_get_BATT_CAP(void)
 {
-    // return bq27220.getRemainCap();
-    return 0;
+    return bq27220.getRemainCap();
+    // return 0;
 }
 float battery_27220_get_BATT_CAP_FULL(void)
 {
-    // return bq27220.getFullChargeCap();
-    return 0;
+    return bq27220.getFullChargeCap();
+    // return 0;
 }
 
 #endif

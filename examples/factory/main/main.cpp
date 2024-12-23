@@ -26,6 +26,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
+#include <driver/i2c.h>
 
 #define NFC_PRIORITY     (configMAX_PRIORITIES - 1)
 #define LORA_PRIORITY    (configMAX_PRIORITIES - 2)
@@ -47,6 +48,8 @@ int count = 0;// counter to keep track of transmitted packets
 
 // bq25896
 XPowersPPM PPM;
+
+BQ27220 bq27220;
 
 // Ink Screen
 #define WAVEFORM EPD_BUILTIN_WAVEFORM
@@ -72,21 +75,42 @@ bool disp_refr_is_busy = false;
 /*********************************************************************************
  *                                   TASK
  * *******************************************************************************/
+// uint8_t pca9555_read_(i2c_port_t i2c_port, int high_port) {
+//     esp_err_t err;
+// 	uint8_t r_data[1];
+
+//     err = i2c_master_read_slave(i2c_port, r_data, 1, REG_INPUT_PORT0 + high_port);
+//     if (err != ESP_OK) {
+//         ESP_LOGE("PCA9555", "%s failed", __func__);
+//         return 0;
+//     }
+
+// 	return r_data[0];
+// }
+
+
 void gps_task(void *param)
 {
     // vTaskSuspend(nfc_handle);
     SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
+
+    // set_config(0, 0x04, 1);
     while (1)
     {
-        while (SerialGPS.available())
-        {
-            SerialMon.write(SerialGPS.read());
-        }
-        while (SerialMon.available())
-        {
-            SerialGPS.write(SerialMon.read());
-        }
-        delay(500);
+        // while (SerialGPS.available())
+        // {
+        //     SerialMon.write(SerialGPS.read());
+        // }
+        // while (SerialMon.available())
+        // {
+        //     SerialGPS.write(SerialMon.read());
+        // }
+        // delay(500);
+        i2c_port_t port = 0;
+        uint8_t io_val = read_io(0);
+        uint8_t io_val1 = read_io(1);
+        Serial.printf("[0x%x]io0=%x, io1=%x\n", EPDIY_PCA9555_ADDR, io_val, io_val1);
+        delay(200);
     }
 }
 
@@ -166,14 +190,8 @@ static inline void checkError(enum EpdDrawError err) {
     }
 }
 
-void ui_refresh_mode_chg(void)
+void disp_refresh_set_mode(int mode)
 {
-    int mode = refresh_mode;
-
-    mode++;
-    if(mode > 2) {
-        mode = 0;
-    }
     refresh_mode = mode;
 }
 
@@ -221,25 +239,6 @@ void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
             decodebuffer[i] = ret.full;
             t32++;
         }
-
-        // EpdRect rener_area = {
-        //     .x = 0,
-        //     .y = 0,
-        //     .width = epd_rotated_display_width(),
-        //     .height = epd_rotated_display_height(),
-        // };
-
-        // if(refresh_mode == REFRESH_MODE_NORMAL) {
-        //     disp_full_refresh();
-        // } else if(refresh_mode == REFRESH_MODE_NEAT){
-        //     disp_full_clean();
-        // }
-        
-        // epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
-        // epd_poweron();
-        // checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
-        // epd_poweroff();
-
         // printf("[disp_flush] x1:%d, y1:%d, w:%d, h:%d\n", area->x1, area->y1, w, h);
     }
     /* Inform the graphics library that you are ready with the flushing */
@@ -258,7 +257,6 @@ static void flush_timer_cb(lv_timer_t *t)
     if(refresh_mode == REFRESH_MODE_FAST) 
     {
         // disp_full_refresh();
-
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
         // checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
@@ -454,12 +452,78 @@ bool bq25896_init(void)
 {
     bool result =  PPM.init(Wire, BOARD_SDA, BOARD_SCL, BQ25896_SLAVE_ADDRESS);
     if (result == false) {
-        while (1) {
-            Serial.println("PPM is not online...");
-            delay(1000);
-        }
+        // while (1) {
+        //     Serial.println("PPM is not online...");
+        //     delay(1000);
+        // }
+        return false;
     }
+    
+    // Set the minimum operating voltage. Below this voltage, the PPM will protect
+    PPM.setSysPowerDownVoltage(3300);
+
+    // Set input current limit, default is 500mA
+    PPM.setInputCurrentLimit(3250);
+
+    Serial.printf("getInputCurrentLimit: %d mA\n", PPM.getInputCurrentLimit());
+
+    // Disable current limit pin
+    PPM.disableCurrentLimitPin();
+
+    // Set the charging target voltage, Range:3840 ~ 4608mV ,step:16 mV
+    PPM.setChargeTargetVoltage(4208);
+
+    // Set the precharge current , Range: 64mA ~ 1024mA ,step:64mA
+    PPM.setPrechargeCurr(64);
+
+    // The premise is that Limit Pin is disabled, or it will only follow the maximum charging current set by Limi tPin.
+    // Set the charging current , Range:0~5056mA ,step:64mA
+    PPM.setChargerConstantCurr(1024);
+
+    // Get the set charging current
+    PPM.getChargerConstantCurr();
+    Serial.printf("getChargerConstantCurr: %d mA\n", PPM.getChargerConstantCurr());
+
+
+    // To obtain voltage data, the ADC must be enabled first
+    PPM.enableMeasure();
+
+    // Turn on charging function
+    // If there is no battery connected, do not turn on the charging function
+    PPM.enableCharge();
+
+    // Turn off charging function
+    // If USB is used as the only power input, it is best to turn off the charging function,
+    // otherwise the VSYS power supply will have a sawtooth wave, affecting the discharge output capability.
+    // PPM.disableCharge();
+
+
+    // The OTG function needs to enable OTG, and set the OTG control pin to HIGH
+    // After OTG is enabled, if an external power supply is plugged in, OTG will be turned off
+
+    // PPM.enableOTG();
+    // PPM.disableOTG();
+    // pinMode(OTG_ENABLE_PIN, OUTPUT);
+    // digitalWrite(OTG_ENABLE_PIN, HIGH);
+
     return result;
+}
+
+bool bq27220_init(void)
+{
+    bool result = bq27220.init();
+    if (result == false) {
+        // while (1) {
+        //     Serial.println("BQ27220 is not online...");
+        //     delay(1000);
+        // }
+        return false;
+    }
+    Serial.println("BQ27220 is online...");
+    Serial.println("BQ27220 is online...");
+    Serial.println("BQ27220 is online...");
+    Serial.println("BQ27220 is online...");
+    return true;
 }
 
 bool lora_sx1262_init(void)
@@ -589,7 +653,6 @@ bool lora_sx1262_init(void)
     return true;
 }
 
-
 void idf_setup() 
 {
     int backlight = 0;
@@ -598,13 +661,15 @@ void idf_setup()
     gpio_hold_dis((gpio_num_t)LORA_RST);
     gpio_deep_sleep_hold_dis();
 
+    // lora and sd use the same spi, in order to avoid mutual influence;
+    // before powering on, all CS signals should be pulled high and in an unselected state;
     pinMode(LORA_CS, OUTPUT);
     digitalWrite(LORA_CS, HIGH);
     pinMode(SD_CS, OUTPUT);
     digitalWrite(SD_CS, HIGH);
 
     Serial.begin(115200);
-    // while (!Serial);
+    // // while (!Serial);
 
     SPI.begin(BOARD_SPI_SCLK, BOARD_SPI_MISO, BOARD_SPI_MOSI);
     Wire.begin(BOARD_SDA, BOARD_SCL);
@@ -612,15 +677,27 @@ void idf_setup()
     pinMode(BL_EN, OUTPUT);
     ui_setting_get_backlight(&backlight);
     ui_setting_set_backlight(backlight);
-    // analogWrite(BL_EN, 0);
+
+    // const uint8_t chip_address = XL9555_SLAVE_ADDRESS0;
+
+    // if (!io.init(Wire, BOARD_SDA, BOARD_SPI_MISO, chip_address)) {
+    //     while (1) {
+    //         Serial.println("Failed to find XL9555 - check your wiring!");
+    //         delay(1000);
+    //     }
+    // }
+    // // Set PORT0 as input,mask = 0xFF = all pin input
+    // io.configPort(ExtensionIOXL9555::PORT0, 0xFF);
+    // // Set PORT1 as input,mask = 0xFF = all pin input
+    // io.configPort(ExtensionIOXL9555::PORT1, 0xFF);
 
     peri_buf[E_PERI_INK_POWER]  = false; 
     peri_buf[E_PERI_BQ25896]    = bq25896_init();   // PMU --- 0x6B
-    peri_buf[E_PERI_BQ27220]    = false;
+    peri_buf[E_PERI_BQ27220]    = bq27220_init();   // PMU --- 0x55
     peri_buf[E_PERI_RTC]        = rtc_pcf8563_init(); // RTC --- 0x51
-    peri_buf[E_PERI_SD_CARD]    = false;
     peri_buf[E_PERI_TOUCH]      = touch_gt911_init();  // Touch --- 0x5D;
     peri_buf[E_PERI_LORA]       = lora_sx1262_init();
+    peri_buf[E_PERI_SD_CARD]    = false;
     peri_buf[E_PERI_GPS]        = false;
 
     screen_init();
