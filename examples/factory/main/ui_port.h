@@ -4,11 +4,12 @@
 
 LV_IMG_DECLARE(img_battery)
 LV_IMG_DECLARE(img_clock)
+LV_IMG_DECLARE(img_gps)
 LV_IMG_DECLARE(img_lora)
-LV_IMG_DECLARE(img_refresh)
 LV_IMG_DECLARE(img_sd_card)
 LV_IMG_DECLARE(img_setting)
 LV_IMG_DECLARE(img_shutdown)
+LV_IMG_DECLARE(img_sleep)
 LV_IMG_DECLARE(img_start)
 LV_IMG_DECLARE(img_test)
 LV_IMG_DECLARE(img_wifi)

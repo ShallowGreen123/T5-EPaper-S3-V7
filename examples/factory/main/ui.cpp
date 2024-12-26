@@ -232,13 +232,13 @@ const struct menu_icon icon_buf[] = {
     {&img_test,     "test"    , 210,  250 },
     {&img_wifi,     "wifi"    , 375,  250 },
     {&img_battery,  "battery" , 45,   455 },
-    // {&img_shutdown, "shutdown", 210,  455 },
+    {&img_gps,      "gps",      210,  455 },
     // {&img_refresh,  "refresh" , 375,  455 },
 };
 
 const struct menu_icon icon_buf2[] = {
-    {&img_shutdown,   "shutdown", 45,  45 },
-    {&img_refresh,    "refresh" , 210, 45 },
+    {&img_shutdown, "shutdown", 45,  45 },
+    {&img_sleep,    "sleep" ,   210, 45 },
 };
 
 static ui_indev_read_cb menu_gesture_dir_cb = NULL;
@@ -308,7 +308,19 @@ static void menu_btn_event(lv_event_t *e)
         else{
             printf("[%d] %s is clicked.\n", data, icon_buf2[data].icon_str);
         }
-        
+        /************* page1 ************
+         * 0 --- SCREEN1_ID  --- clock
+         * 1 --- SCREEN2_ID  --- lora
+         * 2 --- SCREEN3_ID  --- sd card
+         * 3 --- SCREEN4_ID  --- setting
+         * 4 --- SCREEN5_ID  --- test
+         * 5 --- SCREEN6_ID  --- wifi
+         * 6 --- SCREEN7_ID  --- battery
+         * 7 --- SCREEN10_ID --- gps
+         ************ page2 ************
+         * 8 --- SCREEN8_ID  --- shutdown
+         * 9 --- SCREEN9_ID  --- sleep
+        */
         switch (data) {
             case 0: scr_mgr_push(SCREEN1_ID, false); break;
             case 1: scr_mgr_push(SCREEN2_ID, false); break;
@@ -317,8 +329,9 @@ static void menu_btn_event(lv_event_t *e)
             case 4: scr_mgr_push(SCREEN5_ID, false); break;
             case 5: scr_mgr_push(SCREEN6_ID, false); break;
             case 6: scr_mgr_push(SCREEN7_ID, false); break;
-            case 7: scr_mgr_push(SCREEN8_ID, false); break;
-            case 8: scr_mgr_push(SCREEN9_ID, false); break;
+            case 7: scr_mgr_push(SCREEN10_ID, false); break;
+            case 8: scr_mgr_push(SCREEN8_ID, false); break;
+            case 9: scr_mgr_push(SCREEN9_ID, false); break;
             default: break;
         }
     }
@@ -1734,24 +1747,30 @@ static void scr8_shutdown_timer_event(lv_timer_t *t)
 static void create8(lv_obj_t *parent)
 {
 
-    // lv_obj_t * img = lv_img_create(parent);
-    // lv_img_set_src(img, &img_start);
-    // lv_obj_center(img);
+    if(battery_25896_is_chr()) 
+    {
+        lv_obj_t * label = lv_label_create(parent);
+        lv_obj_set_width(label, lv_pct(98));
+        lv_obj_set_style_text_font(label, &Font_Mono_Bold_25, LV_PART_MAIN);
+        lv_obj_set_style_text_color(label, lv_color_hex(EPD_COLOR_TEXT), LV_PART_MAIN);
+        lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+        lv_label_set_text(label, "The shutdown function can only be used when the "
+                            "battery is connected alone, and cannot be shut down when connected to USB.");
+        lv_obj_center(label);
 
-    // const char *str1 = "PWR: Press and hold to power on";
+        // back 
+        scr_back_btn_create(parent, "Shoutdown", scr8_btn_event_cb);
+    } 
+    else 
+    {
+        lv_obj_t * img = lv_img_create(parent);
+        lv_img_set_src(img, &img_start);
+        lv_obj_center(img);
 
-    // lv_obj_t *label = lv_label_create(parent);
-    // lv_label_set_text(label, str1);
-    // lv_obj_set_style_transform_angle(label, -900, 0);
-    // lv_obj_align(label, LV_ALIGN_RIGHT_MID, 60, 80);
+        lv_timer_create(scr8_shutdown_timer_event, 3000, NULL);
+    }
 
-    // lv_coord_t w = lv_txt_get_width(str1, strlen(str1), &Font_Mono_Bold_20, 0, false);
-    // lv_obj_set_style_transform_pivot_x(label, w / 2, 0);
-
-    // back 
-    scr_back_btn_create(parent, "Shoutdown", scr8_btn_event_cb);
-
-    lv_timer_create(scr8_shutdown_timer_event, 3000, NULL);
+    
 }
 
 static void entry8(void) {
@@ -1770,7 +1789,7 @@ static scr_lifecycle_t screen8 = {
     .destroy = destroy8,
 };
 #endif
-//************************************[ screen 8 ]****************************************** shutdown
+//************************************[ screen 9 ]****************************************** sleep
 #if 1
 static void scr9_btn_event_cb(lv_event_t * e)
 {
@@ -1788,12 +1807,6 @@ static void scr9_shutdown_timer_event(lv_timer_t *t)
 
 static void create9(lv_obj_t *parent)
 {
-
-    // lv_obj_t * img = lv_img_create(parent);
-    // lv_img_set_src(img, &img_start);
-    // lv_obj_center(img);
-
-    // back 
     scr_back_btn_create(parent, "Sleep", scr9_btn_event_cb);
 
     lv_timer_create(scr9_shutdown_timer_event, 3000, NULL);
@@ -1813,6 +1826,38 @@ static scr_lifecycle_t screen9 = {
     .entry = entry9,
     .exit  = exit9,
     .destroy = destroy9,
+};
+#endif
+//************************************[ screen 10 ]****************************************** gps
+#if 1
+static void scr10_btn_event_cb(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        // ui_full_refresh();
+        scr_mgr_pop(false);
+    }
+}
+
+static void create10(lv_obj_t *parent)
+{
+    // back 
+    scr_back_btn_create(parent, "GPS", scr10_btn_event_cb);
+}
+
+static void entry10(void) {
+    
+}
+static void exit10(void) {
+}
+static void destroy10(void) { 
+
+}
+
+static scr_lifecycle_t screen10 = {
+    .create = create10,
+    .entry = entry10,
+    .exit  = exit10,
+    .destroy = destroy10,
 };
 #endif
 //************************************[ UI ENTRY ]******************************************
@@ -1869,10 +1914,11 @@ void menu_taskbar_update_timer_cb(lv_timer_t *t)
 {
     static int sec = 0;
 
-    uint8_t h, m, s;
-    ui_clock_get_time(&h, &m, &s);
-    if(sec % 30 == 0)
+    if(sec % 30 == 0) {
+        uint8_t h, m, s;
+        ui_clock_get_time(&h, &m, &s);
         lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
+    }
 
     // static int wifi_st = 0;
     // if(wifi_st % 2 == 0){
@@ -1932,17 +1978,18 @@ void ui_entry(void)
 
     scr_mgr_init();
     scr_mgr_set_bg_color(EPD_COLOR_BG);
-    scr_mgr_register(SCREEN0_ID, &screen0); // menu
-    scr_mgr_register(SCREEN1_ID, &screen1); // clock
-    scr_mgr_register(SCREEN2_ID, &screen2); // lora
-    scr_mgr_register(SCREEN3_ID, &screen3); // sd card
-    scr_mgr_register(SCREEN4_ID, &screen4); // setting
+    scr_mgr_register(SCREEN0_ID,   &screen0);   // menu
+    scr_mgr_register(SCREEN1_ID,   &screen1);   // clock
+    scr_mgr_register(SCREEN2_ID,   &screen2);   // lora
+    scr_mgr_register(SCREEN3_ID,   &screen3);   // sd card
+    scr_mgr_register(SCREEN4_ID,   &screen4);   // setting
     scr_mgr_register(SCREEN4_1_ID, &screen4_1); // setting
-    scr_mgr_register(SCREEN5_ID, &screen5); // test
-    scr_mgr_register(SCREEN6_ID, &screen6); // wifi
-    scr_mgr_register(SCREEN7_ID, &screen7); // battery
-    scr_mgr_register(SCREEN8_ID, &screen8); // shutdown
-    scr_mgr_register(SCREEN9_ID, &screen9); // sleep
+    scr_mgr_register(SCREEN5_ID,   &screen5);   // test
+    scr_mgr_register(SCREEN6_ID,   &screen6);   // wifi
+    scr_mgr_register(SCREEN7_ID,   &screen7);   // battery
+    scr_mgr_register(SCREEN8_ID,   &screen8);   // shutdown
+    scr_mgr_register(SCREEN9_ID,   &screen9);   // sleep
+    scr_mgr_register(SCREEN10_ID,  &screen10);  // gps
 
     scr_mgr_switch(SCREEN0_ID, false); // set root screen
     scr_mgr_set_anim(LV_SCR_LOAD_ANIM_NONE, LV_SCR_LOAD_ANIM_NONE, LV_SCR_LOAD_ANIM_NONE);
