@@ -10,6 +10,7 @@
 #define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
 
 static lv_timer_t *touch_chk_timer = NULL;
+static lv_timer_t *taskbar_update_timer = NULL;
 //************************************[ Other fun ]******************************************
 #if 1
 void scr_back_btn_create(lv_obj_t *parent, const char *text, lv_event_cb_t cb)
@@ -240,10 +241,18 @@ const struct menu_icon icon_buf2[] = {
     {&img_refresh,    "refresh" , 210, 45 },
 };
 
-static ui_indev_read_cb ui_get_gesture_dir = NULL;
+static ui_indev_read_cb menu_gesture_dir_cb = NULL;
 static lv_obj_t *ui_Panel4;
 static lv_obj_t *menu_screen1;
 static lv_obj_t *menu_screen2;
+// taskbar
+static lv_obj_t *menu_taskbar = NULL;
+static lv_obj_t *menu_taskbar_time = NULL;
+static lv_obj_t *menu_taskbar_charge = NULL;
+static lv_obj_t *menu_taskbar_battery = NULL;
+static lv_obj_t *menu_taskbar_battery_percent = NULL;
+static lv_obj_t *menu_taskbar_wifi = NULL;
+
 static int page_num = 1;
 static int page_curr = 0;
 
@@ -319,25 +328,52 @@ static void create0(lv_obj_t *parent)
 {
     int status_bar_height = 60;
 
-    lv_obj_t *status_bar = lv_obj_create(parent);
-    lv_obj_set_size(status_bar, LV_HOR_RES, status_bar_height);
-    lv_obj_set_style_pad_all(status_bar, 0, LV_PART_MAIN);
-    lv_obj_set_style_border_width(status_bar, 0, LV_PART_MAIN);
-    lv_obj_set_scrollbar_mode(status_bar, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_clear_flag(status_bar, LV_OBJ_FLAG_SCROLLABLE);
+    menu_taskbar = lv_obj_create(parent);
+    lv_obj_set_size(menu_taskbar, LV_HOR_RES, status_bar_height);
+    lv_obj_set_style_pad_all(menu_taskbar, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_width(menu_taskbar, 1, LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(menu_taskbar, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(menu_taskbar, LV_OBJ_FLAG_SCROLLABLE);
+    
+    menu_taskbar_time = lv_label_create(menu_taskbar);
+    lv_obj_set_style_border_width(menu_taskbar_time, 0, 0);
+    lv_obj_set_style_text_font(menu_taskbar_time, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", 10, 19);
+    lv_obj_align(menu_taskbar_time, LV_ALIGN_LEFT_MID, 20, 0);
 
-    lv_obj_t *bat = lv_label_create(status_bar);
-    lv_label_set_text_fmt(bat, "%s %d", LV_SYMBOL_BATTERY_2, 50);
-    lv_obj_align(bat, LV_ALIGN_RIGHT_MID, -20, 3);
+    lv_obj_t *status_parent = lv_obj_create(menu_taskbar);
+    lv_obj_set_size(status_parent, lv_pct(80)-4, status_bar_height-10);
+    lv_obj_set_style_pad_all(status_parent, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_width(status_parent, 0, LV_PART_MAIN);
+    lv_obj_set_flex_flow(status_parent, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(status_parent, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(status_parent, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(status_parent, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(status_parent, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(status_parent, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(status_parent, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_column(status_parent, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_scrollbar_mode(status_parent, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(status_parent, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(status_parent, LV_ALIGN_RIGHT_MID, 0, 0);
 
-    lv_obj_t *time = lv_label_create(status_bar);
-    // lv_label_set_text_fmt(time, "%02d:%02d", 10, 19);
-    lv_obj_align(time, LV_ALIGN_CENTER, 0, 3);
+    menu_taskbar_wifi = lv_label_create(status_parent);
+    lv_label_set_text_fmt(menu_taskbar_wifi, "%s", LV_SYMBOL_WIFI);
+    lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
 
-    uint8_t h, m, s;
-    ui_clock_get_time(&h, &m, &s);
-    lv_label_set_text_fmt(time, "%02d:%02d", h, m);
+    menu_taskbar_charge = lv_label_create(status_parent);
+    lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
+    lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
 
+    menu_taskbar_battery = lv_label_create(status_parent);
+    lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_2);
+
+    menu_taskbar_battery_percent = lv_label_create(status_parent);
+    lv_obj_set_style_text_font(menu_taskbar_battery_percent, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", 50);
+
+
+    // menu create
     menu_screen1 = lv_obj_create(parent);
     lv_obj_set_size(menu_screen1, lv_pct(100), LV_VER_RES - status_bar_height);
     lv_obj_set_style_bg_color(menu_screen1, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
@@ -428,14 +464,21 @@ static void create0(lv_obj_t *parent)
     }
 }
 static void entry0(void) {
-    ui_get_gesture_dir = menu_get_gesture_dir;
+    menu_gesture_dir_cb = menu_get_gesture_dir;
     lv_timer_resume(touch_chk_timer);
+    lv_timer_resume(taskbar_update_timer);
  }
 static void exit0(void) {
-    ui_get_gesture_dir = NULL;
+    menu_gesture_dir_cb = NULL;
     lv_timer_pause(touch_chk_timer);
+    lv_timer_pause(taskbar_update_timer);
 }
-static void destroy0(void) { }
+static void destroy0(void) {
+    if(menu_taskbar) {
+        lv_obj_del(menu_taskbar);
+        menu_taskbar = NULL;
+    }
+}
 
 static scr_lifecycle_t screen0 = {
     .create = create0,
@@ -495,7 +538,7 @@ static void scr1_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
@@ -587,7 +630,7 @@ static void scr2_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
@@ -674,7 +717,9 @@ static void ta_event_cb(lv_event_t * e)
     if(code == LV_EVENT_READY)
     {
         printf("LV_EVENT_READY\n");
-        if(ui_test_lora_init() == true) 
+        int ret = 0;
+        ui_test_get_lora(&ret);
+        if(ret == true) 
         {
             const char *str = lv_textarea_get_text(ta);
             int str_len = strlen(str);
@@ -824,7 +869,7 @@ static void scr3_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
@@ -894,7 +939,9 @@ static void create3(lv_obj_t *parent) {
     lv_obj_align(ui_photos_img, LV_ALIGN_CENTER, 0, 0);
 
     lv_obj_t *lab1;
-    if(ui_test_sd_init()) {
+    int ret = 0;
+    ui_test_get_sd(&ret);
+    if(ret) {
         ui_sd_read();
 
         // //---------------------
@@ -915,8 +962,9 @@ static void create3(lv_obj_t *parent) {
 static void entry3(void) 
 {
     // lv_obj_align(scr3_cont, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    if(ui_test_sd_init()) {
+    int ret = 0;
+    ui_test_get_sd(&ret);
+    if(ret) {
         lv_obj_align(sd_info, LV_ALIGN_TOP_MID, 0, 22);
     } else {
         lv_obj_center(sd_info);
@@ -1053,7 +1101,7 @@ static void scr4_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED) {
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
@@ -1100,16 +1148,89 @@ static scr_lifecycle_t screen4 = {
 #endif
 //************************************[ screen 5 ]****************************************** test
 #if 1
+static lv_obj_t *test_list;
+static lv_obj_t *test_page;
+static int test_num = 0;
+static int test_page_num = 0;
+static int test_curr_page = 0;
+
+void test_set_cb(int n) {}
+
+const char *test_get_cb(int *ret_n)
+{
+    return "PASS";
+}
+
+static ui_setting_handle test_handle_list[] = {
+    {.name = "GPS",              .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = ui_test_get_gps},
+    {.name = "LoRa",             .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = ui_test_get_lora},
+    {.name = "SD Card",          .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = ui_test_get_sd},
+    {.name = "[0x51] RTC",       .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = ui_test_get_rtc},
+    {.name = "[0x5D] Touch",     .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = ui_test_get_touch},
+    {.name = "[0x6B] BQ25896",   .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = ui_test_get_BQ25896},
+    {.name = "[0x55] BQ27220",   .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = ui_test_get_BQ27220},
+    {.name = "[0x20] PCA9535",   .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = test_get_cb},
+    {.name = "[0x68] TPS651851", .type=UI_SETTING_TYPE_SW, .set_cb = test_set_cb, .get_cb = test_get_cb},
+};
+
+///////////////////// FUNCTIONS ////////////////////
+/**
+ * func:      test
+ * handle:    test_handle_list
+ * list:      test_list
+ * num:       test_num
+ * page_num:  test_page_num
+ * curr_page: test_curr_page
+ */
+// #define UI_LIST_CREATE(func, handle, list, num, page_num, curr_page) 
+UI_LIST_CREATE(test, test_handle_list, test_list, test_num, test_page_num, test_curr_page)
+
+/**
+ * func:      test
+ * list:      test_list
+ * page:      test_page
+ * num:       test_num
+ * page_num:  test_page_num
+ * curr_page: test_curr_page
+ */
+// #define UI_LIST_BTN_CREATE(func, list, page, num, page_num, curr_page) 
+UI_LIST_BTN_CREATE(test, test_list, test_page, test_num, test_page_num, test_curr_page)
+
+
 static void scr5_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED) {
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
 static void create5(lv_obj_t *parent) 
 {
+    test_list = lv_list_create(parent);
+    lv_obj_set_size(test_list, lv_pct(93), lv_pct(91));
+    lv_obj_align(test_list, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(test_list, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_style_pad_top(test_list, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(test_list, 10, LV_PART_MAIN);
+    lv_obj_set_style_radius(test_list, 0, LV_PART_MAIN);
+    // lv_obj_set_style_outline_pad(test_list, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_width(test_list, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_color(test_list, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(test_list, 0, LV_PART_MAIN);
+
+    test_item_create();
+
+    if(test_page_num > 0)
+        ui_list_btn_create(parent, test_page_switch_cb);
+
+    test_page = lv_label_create(parent);
+    lv_obj_set_width(test_page, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(test_page, LV_SIZE_CONTENT);    /// 1
+    lv_obj_align(test_page, LV_ALIGN_BOTTOM_MID, 0, -30);
+    lv_label_set_text_fmt(test_page, "%d / %d", test_curr_page, test_page_num);
+    lv_obj_set_style_text_color(test_page, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(test_page, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // back
     scr_back_btn_create(parent, "Test", scr5_btn_event_cb);
@@ -1243,19 +1364,23 @@ static void scr6_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
-static void create6(lv_obj_t *parent) {
+static void create6(lv_obj_t *parent) 
+{
+    ui_set_rotation(LV_DISP_ROT_270);
+
     scr6_root = parent;
     wifi_st_lab = lv_label_create(parent);
     lv_obj_set_width(wifi_st_lab, 360);
     // lv_obj_set_style_text_color(wifi_st_lab, lv_color_hex(COLOR_TEXT), LV_PART_MAIN);
     lv_obj_set_style_text_font(wifi_st_lab, &Font_Mono_Bold_25, LV_PART_MAIN);
     lv_label_set_text(wifi_st_lab, (ui_wifi_get_status() ? "Wifi Connect" : "Wifi Disconnect"));
-    lv_obj_set_style_text_align(wifi_st_lab, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_align(wifi_st_lab, LV_ALIGN_BOTTOM_MID, -0, -190);
+    lv_obj_set_style_text_align(wifi_st_lab, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
+    lv_obj_align(wifi_st_lab, LV_ALIGN_BOTTOM_RIGHT, -0, -190);
+
 
     if(ui_wifi_get_status()) {
         wifi_info_label_create(parent);
@@ -1266,23 +1391,23 @@ static void create6(lv_obj_t *parent) {
     lv_obj_set_width(tips_label, LV_PCT(100));
     lv_label_set_long_mode(tips_label, LV_LABEL_LONG_SCROLL);
     lv_obj_set_style_text_color(tips_label, lv_color_black(), LV_PART_MAIN);
-    lv_label_set_text(tips_label,   " 1. Scan the QR code to download `EspTouch`\n\n"
-                                    " 2. Install and launch `EspTouch` APP\n\n"
-                                    " 3. Make sure your phone is \nconnected to WIFI\n\n"
-                                    " 4. Tap the [EspTouch] option of the APP\n\n"
-                                    " 5. Enter your WIFI password and click \n[confirm]\n\n"
-                                    " 6. Finally, click [config wifi] on the\n ink screen\n\n"
-                                    " After that, wait for the network \ndistribution to succeed!"
+    lv_label_set_text(tips_label,   "1. Scan the QR code to download `EspTouch`\n"
+                                    "2. Install and launch `EspTouch` APP\n"
+                                    "3. Make sure your phone is connected to WIFI\n"
+                                    "4. Tap the [EspTouch] option of the APP\n"
+                                    "5. Enter your WIFI password and click [confirm]\n"
+                                    "6. Finally, click [config wifi] on the ink screen\n"
+                                    "After that, wait for the network distribution to succeed!"
                                     );
 
     
-    lv_obj_set_style_text_font(tips_label, &Font_Mono_Bold_20, LV_PART_MAIN);
-    lv_obj_align(tips_label, LV_ALIGN_TOP_MID, 0, 100);
+    lv_obj_set_style_text_font(tips_label, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_obj_align(tips_label, LV_ALIGN_LEFT_MID, 50, -100);
 
     const char *android_url = "https://github.com/EspressifApp/EsptouchForAndroid/releases/tag/v2.0.0/esptouch-v2.0.0.apk";
     const char *ios_url     = "https://apps.apple.com/cn/app/espressif-esptouch/id1071176700";
 
-    lv_coord_t size            = 140;
+    lv_coord_t size            = 120;
     lv_obj_t  *android_rq_code = lv_qrcode_create(parent, size, lv_color_black(), lv_color_white());
     lv_qrcode_update(android_rq_code, android_url, strlen(android_url));
     lv_obj_set_pos(android_rq_code, 340, 10);
@@ -1297,7 +1422,7 @@ static void create6(lv_obj_t *parent) {
 
     lv_obj_t *ios_rq_code = lv_qrcode_create(parent, size, lv_color_black(), lv_color_white());
     lv_qrcode_update(ios_rq_code, ios_url, strlen(ios_url));
-    lv_obj_align(ios_rq_code, LV_ALIGN_RIGHT_MID, -50, 100);
+    lv_obj_align_to(ios_rq_code, android_rq_code, LV_ALIGN_OUT_RIGHT_MID, 20, 0);
 
     lv_obj_set_style_border_color(ios_rq_code, lv_color_white(), 0);
     lv_obj_set_style_border_width(ios_rq_code, 5, 0);
@@ -1306,31 +1431,31 @@ static void create6(lv_obj_t *parent) {
     lv_obj_set_style_text_color(label, lv_color_black(), LV_PART_MAIN);
     lv_obj_align_to(label, ios_rq_code, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
+    // config btn
     lv_obj_t *btn = lv_btn_create(parent);
     lv_obj_set_size(btn, 200, 60);
-    lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, 0, -120);
-    lv_obj_set_style_border_width(btn, 2, LV_PART_MAIN);
+    lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, -20, -120);
     lv_obj_set_style_radius(btn, 10, LV_PART_MAIN);
-
     label = lv_label_create(btn);
     lv_label_set_text(label, "Config Wifi");
     lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(label, &Font_Mono_Bold_25, LV_PART_MAIN);
     lv_obj_center(label);
+    lv_obj_add_event_cb(btn, wifi_config_event_handler, LV_EVENT_CLICKED, NULL);
+    
     //---------------------
     // scr_middle_line(parent);
     // back
     scr_back_btn_create(parent, "Wifi", scr6_btn_event_cb);
 }
 static void entry6(void) 
-{
-    ui_set_rotation(LV_DISP_ROT_270);
-}
+{ }
 static void exit6(void) 
+{ }
+static void destroy6(void) 
 {
     ui_set_rotation(LV_DISP_ROT_NONE);
 }
-static void destroy6(void) { }
 
 static scr_lifecycle_t screen6 = {
     .create = create6,
@@ -1370,7 +1495,7 @@ static void battery_set_line(lv_obj_t *label, const char *str1, const char *str2
 static void scr7_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
@@ -1596,7 +1721,7 @@ static void scr8_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
@@ -1651,7 +1776,7 @@ static void scr9_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
         // ui_full_refresh();
-        scr_mgr_switch(SCREEN0_ID, false);
+        scr_mgr_pop(false);
     }
 }
 
@@ -1720,14 +1845,14 @@ static void indev_get_gesture_dir(lv_timer_t *t)
         // Serial.printf("[ui indev] x=%d, y=%d, diffx=%d\n", data.point.x, data.point.y, diff_x);
 
         if(diff_x > UI_SLIDING_DISTANCE) { // right
-            if(ui_get_gesture_dir) {
-                ui_get_gesture_dir(LV_DIR_LEFT);
+            if(menu_gesture_dir_cb) {
+                menu_gesture_dir_cb(LV_DIR_LEFT);
             }
             last_point.x = 0;
             is_press = false;
         } else if(diff_x < -UI_SLIDING_DISTANCE) { // left
-            if(ui_get_gesture_dir) {
-                ui_get_gesture_dir(LV_DIR_RIGHT);
+            if(menu_gesture_dir_cb) {
+                menu_gesture_dir_cb(LV_DIR_RIGHT);
             }
             last_point.x = 0;
             is_press = false;
@@ -1740,6 +1865,60 @@ static void indev_get_gesture_dir(lv_timer_t *t)
     }
 }
 
+void menu_taskbar_update_timer_cb(lv_timer_t *t)
+{
+    static int sec = 0;
+
+    uint8_t h, m, s;
+    ui_clock_get_time(&h, &m, &s);
+    if(sec % 30 == 0)
+        lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
+
+    // static int wifi_st = 0;
+    // if(wifi_st % 2 == 0){
+    //     lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+    //     // lv_label_set_text_fmt(menu_taskbar_wifi, "%s", LV_SYMBOL_WIFI);
+    // }
+    // else{
+    //     lv_obj_clear_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+    // }
+    // wifi_st++;
+
+    // lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
+    if(sec % 3 == 0) {
+        if(battery_25896_is_chr()){
+            lv_obj_clear_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
+        }else{
+            lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    
+    if(sec % 20 == 0) {
+        int capacity = battery_get_capacity();
+        lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", capacity);
+
+        /**
+         * 0-19     empty
+         * 20-39    1/4
+         * 40-64    1/2
+         * 65-89    3/4
+         * 90-100   full
+        */
+        if(capacity < 20)
+            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_EMPTY);
+        else if(capacity < 40)
+            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_1);
+        else if(capacity < 65)
+            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_2);
+        else if(capacity < 90)
+            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_3);
+        else
+            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_FULL);
+    }
+
+    sec++;
+}
+
 void ui_entry(void)
 {
     lv_disp_t *disp = lv_disp_get_default();
@@ -1747,6 +1926,9 @@ void ui_entry(void)
 
     touch_chk_timer = lv_timer_create(indev_get_gesture_dir, LV_INDEV_DEF_READ_PERIOD, NULL);
     lv_timer_pause(touch_chk_timer);
+
+    taskbar_update_timer = lv_timer_create(menu_taskbar_update_timer_cb, 1000, NULL);
+    lv_timer_pause(taskbar_update_timer);
 
     scr_mgr_init();
     scr_mgr_set_bg_color(EPD_COLOR_BG);

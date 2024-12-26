@@ -1,4 +1,6 @@
-#include "board/pca9555.h"
+#include "epdiy.h"
+#include <driver/gpio.h>
+#include "utilities.h"
 
 // #define PCA_PIN_P00       0x0001
 // #define PCA_PIN_P01       0x0002
@@ -10,12 +12,26 @@
 // #define PCA_PIN_P07       0x0080
 // #define PCA_PIN_PC10      0x0100
 // #define PCA_PIN_PC11      0x0200
-// #define PCA_PIN_PC12      0x0400
+// #define PCA_PIN_PC12      0x0400     // Button
 // #define PCA_PIN_PC13      0x0800
 // #define PCA_PIN_PC14      0x1000
 // #define PCA_PIN_PC15      0x2000
 // #define PCA_PIN_PC16      0x4000
 // #define PCA_PIN_PC17      0x8000
+
+static bool interrupt_done = false;
+
+static void IRAM_ATTR interrupt_handler(void* arg) {
+    interrupt_done = true;
+    printf("interrupt_handler\n");
+}
+
+bool button_read(void)
+{
+    i2c_port_t port = 0;
+    uint8_t io_val = pca9555_read_input(port, 1);
+    return !(io_val & (PCA_PIN_PC12 >> 8));
+}
 
 uint8_t read_io(int io)
 {

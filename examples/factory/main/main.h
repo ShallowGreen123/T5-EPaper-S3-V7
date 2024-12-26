@@ -20,11 +20,16 @@
 #include <XPowersLib.h>
 #include "board/pca9555.h"
 
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
+
+// io_extend
 extern "C" {
     uint8_t read_io(int io);
     void set_config(i2c_port_t port, uint8_t config_value, int high_port);
+    bool button_read(void);
 }
-
 
 // peripheral
 // |        RTC (PCF8563)         |

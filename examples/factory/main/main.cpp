@@ -75,20 +75,6 @@ bool disp_refr_is_busy = false;
 /*********************************************************************************
  *                                   TASK
  * *******************************************************************************/
-// uint8_t pca9555_read_(i2c_port_t i2c_port, int high_port) {
-//     esp_err_t err;
-// 	uint8_t r_data[1];
-
-//     err = i2c_master_read_slave(i2c_port, r_data, 1, REG_INPUT_PORT0 + high_port);
-//     if (err != ESP_OK) {
-//         ESP_LOGE("PCA9555", "%s failed", __func__);
-//         return 0;
-//     }
-
-// 	return r_data[0];
-// }
-
-
 void gps_task(void *param)
 {
     // vTaskSuspend(nfc_handle);
@@ -106,11 +92,16 @@ void gps_task(void *param)
         //     SerialGPS.write(SerialMon.read());
         // }
         // delay(500);
-        i2c_port_t port = 0;
-        uint8_t io_val = read_io(0);
-        uint8_t io_val1 = read_io(1);
-        Serial.printf("[0x%x]io0=%x, io1=%x\n", EPDIY_PCA9555_ADDR, io_val, io_val1);
-        delay(200);
+
+        if (digitalRead(PCA9535_INT) == LOW)
+        {
+            if(button_read()) {
+                Serial.printf("Button Press\n");
+            }else{
+                Serial.printf("Button Release\n");
+            }
+        }
+        delay(10);
     }
 }
 
@@ -501,8 +492,8 @@ bool bq25896_init(void)
     // The OTG function needs to enable OTG, and set the OTG control pin to HIGH
     // After OTG is enabled, if an external power supply is plugged in, OTG will be turned off
 
-    // PPM.enableOTG();
-    // PPM.disableOTG();
+    PPM.enableOTG();
+    PPM.disableOTG();
     // pinMode(OTG_ENABLE_PIN, OUTPUT);
     // digitalWrite(OTG_ENABLE_PIN, HIGH);
 
@@ -653,6 +644,58 @@ bool lora_sx1262_init(void)
     return true;
 }
 
+bool sd_card_init(void)
+{
+    if(!SD.begin(SD_CS)){
+        Serial.println("Card Mount Failed");
+        return false;
+    }
+
+    uint8_t cardType = SD.cardType();
+
+    if(cardType == CARD_NONE){
+        Serial.println("No SD card attached");
+        return false;
+    }
+
+    Serial.print("SD Card Type: ");
+    if(cardType == CARD_MMC){
+        Serial.println("MMC");
+    } else if(cardType == CARD_SD){
+        Serial.println("SDSC");
+    } else if(cardType == CARD_SDHC){
+        Serial.println("SDHC");
+    } else {
+        Serial.println("UNKNOWN");
+    }
+    return true;
+}
+
+bool gps_init(void)
+{
+    int i = 10;
+    bool reply = false;
+
+    Serial.println("\nTesting Modem Response...\n");
+    Serial.println("****");
+    while (i)
+    {
+        if (SerialGPS.available())
+        {
+            String r = SerialGPS.readString();
+            SerialMon.println(r);
+            if (r.length() >= 0)
+            {
+                reply = true;
+                break;
+            }
+        }
+        delay(500);
+        i--;
+    }
+    return false;
+}
+
 void idf_setup() 
 {
     int backlight = 0;
@@ -668,6 +711,11 @@ void idf_setup()
     pinMode(SD_CS, OUTPUT);
     digitalWrite(SD_CS, HIGH);
 
+    // Set the interrupt input to input pull-up
+    if (PCA9535_INT > 0) {
+        pinMode(PCA9535_INT, INPUT_PULLUP);
+    }
+
     Serial.begin(115200);
     // // while (!Serial);
 
@@ -678,27 +726,14 @@ void idf_setup()
     ui_setting_get_backlight(&backlight);
     ui_setting_set_backlight(backlight);
 
-    // const uint8_t chip_address = XL9555_SLAVE_ADDRESS0;
-
-    // if (!io.init(Wire, BOARD_SDA, BOARD_SPI_MISO, chip_address)) {
-    //     while (1) {
-    //         Serial.println("Failed to find XL9555 - check your wiring!");
-    //         delay(1000);
-    //     }
-    // }
-    // // Set PORT0 as input,mask = 0xFF = all pin input
-    // io.configPort(ExtensionIOXL9555::PORT0, 0xFF);
-    // // Set PORT1 as input,mask = 0xFF = all pin input
-    // io.configPort(ExtensionIOXL9555::PORT1, 0xFF);
-
     peri_buf[E_PERI_INK_POWER]  = false; 
     peri_buf[E_PERI_BQ25896]    = bq25896_init();   // PMU --- 0x6B
     peri_buf[E_PERI_BQ27220]    = bq27220_init();   // PMU --- 0x55
     peri_buf[E_PERI_RTC]        = rtc_pcf8563_init(); // RTC --- 0x51
     peri_buf[E_PERI_TOUCH]      = touch_gt911_init();  // Touch --- 0x5D;
     peri_buf[E_PERI_LORA]       = lora_sx1262_init();
-    peri_buf[E_PERI_SD_CARD]    = false;
-    peri_buf[E_PERI_GPS]        = false;
+    peri_buf[E_PERI_SD_CARD]    = sd_card_init();
+    peri_buf[E_PERI_GPS]        = gps_init();
 
     screen_init();
 

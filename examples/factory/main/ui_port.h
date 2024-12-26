@@ -47,8 +47,13 @@ void ui_setting_set_refresh_speed(int bl);
 const char *ui_setting_get_refresh_speed(int *ret_bl);
 
 // test
-bool ui_test_lora_init(void);
-bool ui_test_sd_init(void);
+const char *ui_test_get_gps(int *ret_n);
+const char *ui_test_get_lora(int *ret_n);
+const char *ui_test_get_sd(int *ret_n);
+const char *ui_test_get_rtc(int *ret_n);
+const char *ui_test_get_touch(int *ret_n);
+const char *ui_test_get_BQ25896(int *ret_n);
+const char *ui_test_get_BQ27220(int *ret_n);
 
 // wifi
 bool ui_wifi_get_status(void);
@@ -59,6 +64,8 @@ const char *ui_wifi_get_ssid(void);
 const char *ui_wifi_get_pwd(void);
 
 // battery
+
+int battery_get_capacity(void);
 /* 25896 */
 void battery_chg_encharge(void);
 void battery_chg_discharge(void);

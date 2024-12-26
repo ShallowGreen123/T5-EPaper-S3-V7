@@ -14,6 +14,8 @@ extern "C" {
 
 #include "epd_internals.h"
 
+#include "board/pca9555.h"
+
 /// An area on the display.
 typedef struct {
     /// Horizontal position.

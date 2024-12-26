@@ -183,14 +183,40 @@ const char *ui_setting_get_refresh_speed(int *ret_bl)
 }
 #endif
 //************************************[ screen 5 ]****************************************** test
-bool ui_test_lora_init(void)
+const char *ui_test_get_gps(int *ret_n)
 {
-    return false;
+    if(ret_n) *ret_n = peri_buf[E_PERI_GPS];
+    return ((peri_buf[E_PERI_GPS] ==  true) ? "PASS" : "---");
 }
-
-bool ui_test_sd_init(void)
+const char *ui_test_get_lora(int *ret_n)
 {
-    return false;
+    if(ret_n) *ret_n = peri_buf[E_PERI_LORA];
+    return ((peri_buf[E_PERI_LORA] ==  true) ? "PASS" : "---");
+}
+const char *ui_test_get_sd(int *ret_n)
+{
+    if(ret_n) *ret_n = peri_buf[E_PERI_SD_CARD];
+    return ((peri_buf[E_PERI_SD_CARD] ==  true) ? "PASS" : "---");
+}
+const char *ui_test_get_rtc(int *ret_n)
+{
+    if(ret_n) *ret_n = peri_buf[E_PERI_RTC];
+    return ((peri_buf[E_PERI_RTC] ==  true) ? "PASS" : "---");
+}
+const char *ui_test_get_touch(int *ret_n)
+{
+    if(ret_n) *ret_n = peri_buf[E_PERI_TOUCH];
+    return ((peri_buf[E_PERI_TOUCH] ==  true) ? "PASS" : "---");
+}
+const char *ui_test_get_BQ25896(int *ret_n)
+{
+    if(ret_n) *ret_n = peri_buf[E_PERI_BQ25896];
+    return ((peri_buf[E_PERI_BQ25896] ==  true) ? "PASS" : "---");
+}
+const char *ui_test_get_BQ27220(int *ret_n)
+{
+    if(ret_n) *ret_n = peri_buf[E_PERI_BQ27220];
+    return ((peri_buf[E_PERI_BQ27220] ==  true) ? "PASS" : "---");
 }
 
 //************************************[ screen 6 ]****************************************** wifi
@@ -220,6 +246,20 @@ const char *ui_wifi_get_pwd(void)
 }
 //************************************[ screen 7 ]****************************************** battery
 #if 1
+
+int battery_get_capacity(void)
+{
+    static int bat = 50;
+    // return lv_rand(0, 100);
+
+    bat += 5;
+    if(bat >= 100) {
+        bat = 0;
+    }
+
+    return bat;
+}
+
 /* 25896 */
 void battery_chg_encharge(void)
 {
@@ -239,7 +279,7 @@ bool battery_25896_is_vaild(void)
 
 bool battery_25896_is_chr(void)
 {
-    if(PPM.isVbusIn() == false) {
+    if(PPM.isCharging() == false) {
         return false;
     } else {
         return true;

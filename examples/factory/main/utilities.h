@@ -36,6 +36,8 @@
 
 #define BL_EN (11)
 
+#define PCA9535_INT (38)
+
 #define BOOT_BTN (0)
 
 
