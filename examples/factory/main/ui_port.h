@@ -21,6 +21,8 @@ LV_FONT_DECLARE(Font_Mono_Bold_90)
 LV_FONT_DECLARE(Font_Geist_Light_20)
 LV_FONT_DECLARE(Font_Geist_Bold_20)
 
+void ui_indev_touch_en(void);
+void ui_indev_touch_dis(void);
 void ui_refresh_set_mode(int mode);
 void ui_full_refresh(void);
 void ui_full_clean(void);
@@ -42,6 +44,8 @@ bool ui_lora_recv(String *str);
 void ui_sd_read(void);
 
 // setting
+int ui_setting_get_vcom(void);
+void ui_setting_set_vcom(int v);
 void ui_setting_set_backlight(int bl);
 const char *ui_setting_get_backlight(int *ret_bl);
 void ui_setting_set_refresh_speed(int bl);

@@ -9,6 +9,9 @@
 
 #define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
 
+#define GLOBAL_BUF_LEN 16
+char global_buf[GLOBAL_BUF_LEN];
+
 static lv_timer_t *touch_chk_timer = NULL;
 static lv_timer_t *taskbar_update_timer = NULL;
 //************************************[ Other fun ]******************************************
@@ -75,9 +78,12 @@ void scr_middle_line(lv_obj_t *parent)
             switch (h->type)                                                               \
             {                                                                              \
             case UI_SETTING_TYPE_SW:                                                       \
-                h->get_cb(&n);                                                             \
-                h->set_cb(n);                                                              \
-                lv_label_set_text_fmt(h->st, "%s", h->get_cb(NULL));                       \
+                if (h->get_cb != NULL && h->set_cb != NULL)                                \
+                {                                                                          \
+                    h->get_cb(&n);                                                         \
+                    h->set_cb(n);                                                          \
+                    lv_label_set_text_fmt(h->st, "%s", h->get_cb(NULL));                   \
+                }                                                                          \
                 break;                                                                     \
             case UI_SETTING_TYPE_SUB:                                                      \
                 scr_mgr_push(h->sub_id, false);                                            \
@@ -114,22 +120,16 @@ void scr_middle_line(lv_obj_t *parent)
             lv_obj_set_style_text_color(h->obj, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN); \
             lv_obj_set_style_border_width(h->obj, 3, LV_PART_MAIN | LV_STATE_DEFAULT);     \
             lv_obj_set_style_border_width(h->obj, 3, LV_PART_MAIN | LV_STATE_PRESSED);     \
-            lv_obj_set_style_outline_width(h->obj, 3, LV_PART_MAIN | LV_STATE_PRESSED);    \
+            lv_obj_set_style_outline_width(h->obj, 0, LV_PART_MAIN | LV_STATE_PRESSED);    \
             lv_obj_set_style_radius(h->obj, 30, LV_PART_MAIN | LV_STATE_DEFAULT);          \
-            lv_obj_add_event_cb(h->obj, func##_scr_event, LV_EVENT_CLICKED, (void *)h);   \
+            lv_obj_add_event_cb(h->obj, func##_scr_event, LV_EVENT_CLICKED, (void *)h);    \
                                                                                            \
-            switch (h->type)                                                               \
+            if (h->get_cb)                                                                 \
             {                                                                              \
-            case UI_SETTING_TYPE_SW:                                                       \
                 h->st = lv_label_create(h->obj);                                           \
                 lv_obj_set_style_text_font(h->st, &Font_Mono_Bold_30, LV_PART_MAIN);       \
-                lv_obj_align(h->st, LV_ALIGN_RIGHT_MID, 0, 0);                             \
+                lv_obj_align(h->st, LV_ALIGN_RIGHT_MID, -3, 0);                            \
                 lv_label_set_text_fmt(h->st, "%s", h->get_cb(NULL));                       \
-                break;                                                                     \
-            case UI_SETTING_TYPE_SUB:                                                      \
-                break;                                                                     \
-            default:                                                                       \
-                break;                                                                     \
             }                                                                              \
         }                                                                                  \
     }
@@ -292,7 +292,6 @@ static void menu_get_gesture_dir(int dir)
         lv_obj_set_style_bg_color(lv_obj_get_child(ui_Panel4, 1), lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     }
 }
-
 
 static void menu_btn_event(lv_event_t *e)
 {
@@ -1067,6 +1066,209 @@ static scr_lifecycle_t screen4_1 = {
     .destroy = destroy4_1,
 };
 #endif
+// --------------------- screen 4.2 --------------------- Set EPD Vcom
+#if 1
+
+static lv_obj_t *set_1000mv_item;
+static lv_obj_t *set_100mv_item;
+static lv_obj_t *set_10mv_item;
+
+static lv_obj_t * set_epd_vcom_lab;
+static lv_obj_t *set_1000mv_lab;
+static lv_obj_t *set_100mv_lab;
+static lv_obj_t *set_10mv_lab;
+
+static float set_epd_vcom_num;
+static int   set_1000mv_num;
+static int   set_100mv_num;
+static int   set_10mv_num;
+
+static void scr4_2_btn_event_cb(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        scr_mgr_pop(false);
+    }
+}
+
+/* clang-format on */
+#define SET_RANGE(opt, num, min, max, num_lab) \
+    if (opt == '+')                            \
+    {                                          \
+        num++;                                 \
+    }                                          \
+    else                                       \
+    {                                          \
+        num--;                                 \
+    }                                          \
+    num = num > max ? max : num;               \
+    num = num < min ? min : num;               \
+    lv_label_set_text_fmt(num_lab, "%d", num);
+/* clang-format off */
+static void scr4_2_sub_item_event(lv_event_t *e)
+{
+    lv_obj_t *parent = lv_obj_get_parent(e->target);
+    char opt = (int)(lv_event_get_user_data(e));
+
+    if(parent == set_1000mv_item) 
+    {
+        SET_RANGE(opt, set_1000mv_num, 0, 4, set_1000mv_lab);
+    } 
+    else if(parent == set_100mv_item) 
+    {
+        SET_RANGE(opt, set_100mv_num, 0, 9, set_100mv_lab);
+    } 
+    else if(parent == set_10mv_item) 
+    {
+        SET_RANGE(opt, set_10mv_num, 0, 9, set_10mv_lab);
+    }
+
+    set_epd_vcom_num = (set_1000mv_num * 1000 + set_100mv_num * 100 + set_10mv_num * 10) / 1000.0;
+    ui_setting_set_vcom((int)(set_epd_vcom_num * 1000));
+    lv_label_set_text_fmt(set_epd_vcom_lab, "%.2fV", set_epd_vcom_num);
+}
+
+static lv_obj_t *scr4_2_sub_item_create(lv_obj_t *parent, lv_obj_t **lab, const char *range, const char *unit)
+{
+    lv_obj_t *ui_Container1 = lv_obj_create(parent);
+    lv_obj_remove_style_all(ui_Container1);
+    lv_obj_set_width(ui_Container1, 490);
+    lv_obj_set_height(ui_Container1, 145);
+    lv_obj_set_x(ui_Container1, 5);
+    lv_obj_set_y(ui_Container1, -177);
+    lv_obj_set_align(ui_Container1, LV_ALIGN_CENTER);
+    lv_obj_clear_flag(ui_Container1, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_border_width(ui_Container1, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui_Container1, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *ui_Label2 = lv_label_create(ui_Container1);
+    lv_obj_set_width(ui_Label2, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label2, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label2, 0);
+    lv_obj_set_y(ui_Label2, 29);
+    lv_obj_set_align(ui_Label2, LV_ALIGN_CENTER);
+    // lv_obj_set_style_border_width(ui_Label2, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_label_set_text_fmt(ui_Label2, "%s", range);
+    lv_obj_set_style_text_font(ui_Label2, &Font_Mono_Bold_25, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    *lab = lv_label_create(ui_Container1);
+    lv_obj_set_width(*lab, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(*lab, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(*lab, -23);
+    lv_obj_set_y(*lab, -13);
+    lv_obj_set_align(*lab, LV_ALIGN_CENTER);
+    lv_label_set_text(*lab, "0");
+    lv_obj_set_style_border_width(*lab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(*lab, &Font_Mono_Bold_30, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *ui_Label9 = lv_label_create(ui_Container1);
+    lv_obj_set_width(ui_Label9, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label9, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label9, 20);
+    lv_obj_set_y(ui_Label9, -12);
+    lv_obj_set_align(ui_Label9, LV_ALIGN_CENTER);
+    lv_label_set_text_fmt(ui_Label9, "%s", unit);
+    // lv_obj_set_style_border_width(ui_Label9, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label9, &Font_Mono_Bold_25, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *sub_btn = lv_obj_create(ui_Container1);
+    lv_obj_remove_style_all(sub_btn);
+    lv_obj_set_width(sub_btn, 76);
+    lv_obj_set_height(sub_btn, 72);
+    lv_obj_set_x(sub_btn, -171);
+    lv_obj_set_y(sub_btn, 6);
+    lv_obj_set_align(sub_btn, LV_ALIGN_CENTER);
+    lv_obj_clear_flag(sub_btn, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_radius(sub_btn, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(sub_btn, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *sub_txt = lv_label_create(sub_btn);
+    lv_obj_set_align(sub_txt, LV_ALIGN_CENTER);
+    lv_label_set_text(sub_txt, "SUB");
+    lv_obj_set_style_text_font(sub_txt, &Font_Mono_Bold_25, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *add_btn = lv_obj_create(ui_Container1);
+    lv_obj_remove_style_all(add_btn);
+    lv_obj_set_width(add_btn, 76);
+    lv_obj_set_height(add_btn, 72);
+    lv_obj_set_x(add_btn, 166);
+    lv_obj_set_y(add_btn, 3);
+    lv_obj_set_align(add_btn, LV_ALIGN_CENTER);
+    lv_obj_clear_flag(add_btn, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_radius(add_btn, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(add_btn, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    
+    lv_obj_t *add_txt = lv_label_create(add_btn);
+    lv_obj_set_align(add_txt, LV_ALIGN_CENTER);
+    lv_label_set_text(add_txt, "ADD");
+    lv_obj_set_style_text_font(add_txt, &Font_Mono_Bold_25, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_add_event_cb(sub_btn, scr4_2_sub_item_event, LV_EVENT_CLICKED, (void *)'-');
+    lv_obj_add_event_cb(add_btn, scr4_2_sub_item_event, LV_EVENT_CLICKED, (void *)'+');
+
+    return ui_Container1;
+}
+
+static void create4_2(lv_obj_t *parent) 
+{
+    lv_obj_t * ui_Container2 = lv_obj_create(parent);
+    lv_obj_remove_style_all(ui_Container2);
+    lv_obj_set_width(ui_Container2, lv_pct(100));
+    lv_obj_set_height(ui_Container2, lv_pct(60));
+    lv_obj_set_x(ui_Container2, 0);
+    lv_obj_set_y(ui_Container2, 23);
+    lv_obj_set_align(ui_Container2, LV_ALIGN_CENTER);
+    lv_obj_set_flex_flow(ui_Container2, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(ui_Container2, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+    lv_obj_clear_flag(ui_Container2, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_border_width(ui_Container2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(ui_Container2, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_column(ui_Container2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    set_epd_vcom_lab = lv_label_create(parent);
+    lv_obj_set_width(set_epd_vcom_lab, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(set_epd_vcom_lab, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(set_epd_vcom_lab, -1);
+    lv_obj_set_y(set_epd_vcom_lab, -310);
+    lv_obj_set_align(set_epd_vcom_lab, LV_ALIGN_CENTER);
+    lv_label_set_text(set_epd_vcom_lab, "1.54V");
+    lv_obj_set_style_text_font(set_epd_vcom_lab, &Font_Mono_Bold_90, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    set_1000mv_item = scr4_2_sub_item_create(ui_Container2, &set_1000mv_lab, "range: 0 - 4", "* V");
+    set_100mv_item  = scr4_2_sub_item_create(ui_Container2, &set_100mv_lab , "range: 0 - 9", "* 0.1V");
+    set_10mv_item   = scr4_2_sub_item_create(ui_Container2, &set_10mv_lab  , "range: 0 - 9", "* 0.01V");
+
+    int default_vcom = ui_setting_get_vcom();
+    set_1000mv_num = default_vcom / 1000;
+    set_100mv_num  = (default_vcom / 100) % 10;
+    set_10mv_num   = (default_vcom / 10) %10 ;
+
+    lv_label_set_text_fmt(set_1000mv_lab, "%d", set_1000mv_num);
+    lv_label_set_text_fmt(set_100mv_lab, "%d", set_100mv_num);
+    lv_label_set_text_fmt(set_10mv_lab, "%d", set_10mv_num);
+
+    lv_obj_align(set_1000mv_lab, LV_ALIGN_CENTER, -23, -12);
+    lv_obj_align(set_100mv_lab, LV_ALIGN_CENTER,  -38, -12);
+    lv_obj_align(set_10mv_lab, LV_ALIGN_CENTER,   -48, -12);
+
+    set_epd_vcom_num = (set_1000mv_num * 1000 + set_100mv_num * 100 + set_10mv_num * 10) / 1000.0;
+    lv_label_set_text_fmt(set_epd_vcom_lab, "%.2fV", set_epd_vcom_num);
+
+    scr_back_btn_create(parent, ("Set Vcom"), scr4_2_btn_event_cb);
+}
+static void entry4_2(void) 
+{
+}
+static void exit4_2(void) {
+}
+static void destroy4_2(void) { }
+
+static scr_lifecycle_t screen4_2 = {
+    .create = create4_2,
+    .entry = entry4_2,
+    .exit  = exit4_2,
+    .destroy = destroy4_2,
+};
+#endif
 // --------------------- screen --------------------- Setting
 #if 1
 static lv_obj_t *setting_list;
@@ -1082,10 +1284,18 @@ const char *get_cb(int *ret_n)
     return "OFF";
 }
 
+const char *get_vcom_cb(int *ret_n) 
+{
+    float v = (ui_setting_get_vcom() / 1000.0);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%0.2fV", v);
+    return (const char *)global_buf;
+}
+
 static ui_setting_handle setting_handle_list[] = {
-    {.name="Backlight",     .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_backlight,     .get_cb=ui_setting_get_backlight},
-    {.name="Refresh Speed", .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_refresh_speed, .get_cb=ui_setting_get_refresh_speed},
-    {.name="-About System", .type=UI_SETTING_TYPE_SUB, .set_cb=set_cb,                       .get_cb=get_cb,                      .sub_id=SCREEN4_1_ID},
+    {.name="Backlight",       .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_backlight,     .get_cb=ui_setting_get_backlight},
+    {.name="Refresh Speed",   .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_refresh_speed, .get_cb=ui_setting_get_refresh_speed},
+    {.name = "-Set EPD Vcom", .type=UI_SETTING_TYPE_SUB, .set_cb=NULL, .get_cb=get_vcom_cb, .sub_id=SCREEN4_2_ID},
+    {.name="-About System",   .type=UI_SETTING_TYPE_SUB, .set_cb=NULL, .get_cb=NULL,        .sub_id=SCREEN4_1_ID},
 };
 
 /**
@@ -1120,6 +1330,8 @@ static void scr4_btn_event_cb(lv_event_t * e)
 
 static void create4(lv_obj_t *parent) 
 {
+    ui_indev_touch_dis();
+
     setting_list = lv_list_create(parent);
     lv_obj_set_size(setting_list, lv_pct(93), lv_pct(91));
     lv_obj_align(setting_list, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -1983,7 +2195,8 @@ void ui_entry(void)
     scr_mgr_register(SCREEN2_ID,   &screen2);   // lora
     scr_mgr_register(SCREEN3_ID,   &screen3);   // sd card
     scr_mgr_register(SCREEN4_ID,   &screen4);   // setting
-    scr_mgr_register(SCREEN4_1_ID, &screen4_1); // setting
+    scr_mgr_register(SCREEN4_1_ID, &screen4_1); //  - About System
+    scr_mgr_register(SCREEN4_2_ID, &screen4_2); //  - Set EPD Vcom
     scr_mgr_register(SCREEN5_ID,   &screen5);   // test
     scr_mgr_register(SCREEN6_ID,   &screen6);   // wifi
     scr_mgr_register(SCREEN7_ID,   &screen7);   // battery

@@ -70,6 +70,7 @@ int refresh_mode = REFRESH_MODE_NORMAL;
 uint8_t *decodebuffer = NULL;
 lv_timer_t *flush_timer = NULL;
 volatile bool disp_flush_enabled = true;
+volatile bool indev_touch_enabled = true;
 bool disp_refr_is_busy = false;
 
 /*********************************************************************************
@@ -181,6 +182,16 @@ static inline void checkError(enum EpdDrawError err) {
     }
 }
 
+void indev_touch_en()
+{
+    indev_touch_enabled = true;
+}
+
+void indev_touch_dis()
+{
+    indev_touch_enabled = false;
+}
+
 void disp_refresh_set_mode(int mode)
 {
     refresh_mode = mode;
@@ -214,7 +225,11 @@ void disp_full_clean(void)
     epd_poweroff();
 }
 
-void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
+/*********************************************************************************
+ *                            STATIC  FUNCTION
+ * *******************************************************************************/
+
+static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 {
     if(disp_flush_enabled) {
         uint16_t w = lv_area_get_width(area);
@@ -273,6 +288,7 @@ static void flush_timer_cb(lv_timer_t *t)
     }
     // static int cnt = 0;
     // printf("[flush] %d\n", cnt++);
+    indev_touch_en();
 
     lv_timer_pause(flush_timer);
 }
@@ -289,9 +305,12 @@ static void dips_render_start_cb(struct _lv_disp_drv_t * disp_drv)
     // printf("dips_render_start_cb\n");
 }
 
-void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
+static void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
 {
     int16_t  x, y;
+
+    if(indev_touch_enabled == false) 
+        return;
 
     // int16_t x[5], y[5];
     if(touch.isPressed()) {
@@ -310,7 +329,7 @@ void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
     }
 }
 
-void lv_port_disp_init(void)
+static void lv_port_disp_init(void)
 {
     lv_init();
 
@@ -340,7 +359,7 @@ void lv_port_disp_init(void)
     lv_indev_drv_register(&indev_drv);
 }
 
-bool touch_gt911_init(void)
+static bool touch_gt911_init(void)
 {
     // Touch --- 0x5D
     touch.setPins(TOUCH_RST, TOUCH_INT);
@@ -377,7 +396,7 @@ bool touch_gt911_init(void)
     return true;
 }
 
-bool rtc_pcf8563_init(void)
+static bool rtc_pcf8563_init(void)
 {
     pinMode(RTC_IRQ, INPUT_PULLUP);
 
@@ -401,13 +420,14 @@ bool rtc_pcf8563_init(void)
     return true;
 }
 
-bool screen_init(void)
+static bool screen_init(void)
 {
     epd_init(&DEMO_BOARD, &ED047TC1, EPD_LUT_64K);
     // Set VCOM for boards that allow to set this in software (in mV).
     // This will print an error if unsupported. In this case,
     // set VCOM using the hardware potentiometer and delete this line.
-    epd_set_vcom(1560);
+    // epd_set_vcom(1560);
+    epd_set_vcom(ui_setting_get_vcom()); // TPS651851 VCOM output range 0-5.1v  step:10mV
 
     hl = epd_hl_init(WAVEFORM);
 
@@ -439,7 +459,7 @@ bool screen_init(void)
     return true;
 }
 
-bool bq25896_init(void)
+static bool bq25896_init(void)
 {
     bool result =  PPM.init(Wire, BOARD_SDA, BOARD_SCL, BQ25896_SLAVE_ADDRESS);
     if (result == false) {
@@ -500,7 +520,7 @@ bool bq25896_init(void)
     return result;
 }
 
-bool bq27220_init(void)
+static bool bq27220_init(void)
 {
     bool result = bq27220.init();
     if (result == false) {
@@ -517,7 +537,7 @@ bool bq27220_init(void)
     return true;
 }
 
-bool lora_sx1262_init(void)
+static bool lora_sx1262_init(void)
 {
     // initialize SX1262 with default settings
     Serial.print(F("[SX1262] Initializing ... "));
@@ -644,7 +664,7 @@ bool lora_sx1262_init(void)
     return true;
 }
 
-bool sd_card_init(void)
+static bool sd_card_init(void)
 {
     if(!SD.begin(SD_CS)){
         Serial.println("Card Mount Failed");
@@ -671,7 +691,7 @@ bool sd_card_init(void)
     return true;
 }
 
-bool gps_init(void)
+static bool gps_init(void)
 {
     int i = 10;
     bool reply = false;
@@ -737,8 +757,8 @@ void idf_setup()
 
     screen_init();
 
-    xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
-    xTaskCreate(lora_task, "lora_task", 1024 * 3, NULL, LORA_PRIORITY, &lora_handle);
+    // xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
+    // xTaskCreate(lora_task, "lora_task", 1024 * 3, NULL, LORA_PRIORITY, &lora_handle);
 
     printf("LVGL Init\n");
     lv_port_disp_init();

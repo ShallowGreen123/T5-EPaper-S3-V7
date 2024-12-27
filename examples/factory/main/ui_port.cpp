@@ -7,8 +7,19 @@
 #define T5_EPER_S3_SF_VER "v1.0 24.12.03"
 
 int ui_setting_backlight = 3;  // 0 - 3
+int epd_vcom_default = 1560;
 
 //************************************[ Other fun ]******************************************
+
+void ui_indev_touch_en(void)
+{
+    indev_touch_en();
+}
+
+void ui_indev_touch_dis(void)
+{
+    indev_touch_dis();
+}
 
 void ui_refresh_set_mode(int mode)
 {
@@ -118,6 +129,20 @@ void ui_sd_read(void)
 }
 //************************************[ screen 4 ]****************************************** setting
 #if 1
+
+int ui_setting_get_vcom(void)
+{
+    return epd_vcom_default;
+}
+
+void ui_setting_set_vcom(int v)
+{
+    v = v > 5000 ? 5000 : v;
+    v = v < 200 ? 200 : v;
+    epd_vcom_default = v;
+    epd_set_vcom(v); // TPS651851 VCOM output range 0-5.1v  step:10mV
+}
+
 void ui_setting_set_backlight(int bl)
 {
     bl++;

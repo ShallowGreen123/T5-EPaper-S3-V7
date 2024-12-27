@@ -32,10 +32,17 @@
 #include <Arduino.h>
 #include "TouchDrvGT911.hpp"
 
-#define SENSOR_SDA  39
-#define SENSOR_SCL  40
-#define SENSOR_IRQ  3
-#define SENSOR_RST  9
+#define SENSOR_SDA  18
+#define SENSOR_SCL  8
+#define SENSOR_IRQ  17
+#define SENSOR_RST  16
+
+
+// #define SENSOR_SDA  39
+// #define SENSOR_SCL  40
+// #define SENSOR_IRQ  3
+// #define SENSOR_RST  9
+
 
 TouchDrvGT911 touch;
 int16_t x[5], y[5];

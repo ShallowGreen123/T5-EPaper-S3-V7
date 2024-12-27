@@ -74,6 +74,9 @@ void disp_full_refresh(void);
 void disp_full_clean(void);
 void disp_refresh_set_mode(int mode);
 
+void indev_touch_en();
+void indev_touch_dis();
+
 // Touch
 extern TouchDrvGT911 touch;
 

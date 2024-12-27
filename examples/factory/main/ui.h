@@ -37,6 +37,7 @@ enum {
     SCREEN3_ID,
     SCREEN4_ID,
     SCREEN4_1_ID,
+    SCREEN4_2_ID,
     SCREEN5_ID,
     SCREEN6_ID,
     SCREEN7_ID,
