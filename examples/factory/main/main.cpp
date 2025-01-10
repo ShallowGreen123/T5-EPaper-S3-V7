@@ -296,7 +296,7 @@ static void flush_timer_cb(lv_timer_t *t)
 static void dips_render_start_cb(struct _lv_disp_drv_t * disp_drv)
 {
     if(flush_timer == NULL) {
-        flush_timer = lv_timer_create(flush_timer_cb, 200, NULL);
+        flush_timer = lv_timer_create(flush_timer_cb, 30, NULL);
         lv_timer_ready(flush_timer);
     } else {
         lv_timer_ready(flush_timer);

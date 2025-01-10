@@ -1102,7 +1102,7 @@ static void scr4_2_btn_event_cb(lv_event_t * e)
     }                                          \
     num = num > max ? max : num;               \
     num = num < min ? min : num;               \
-    lv_label_set_text_fmt(num_lab, "%d", num);
+    lv_label_set_text_fmt(num_lab, " %d ", num);
 /* clang-format off */
 static void scr4_2_sub_item_event(lv_event_t *e)
 {
@@ -1156,7 +1156,7 @@ static lv_obj_t *scr4_2_sub_item_create(lv_obj_t *parent, lv_obj_t **lab, const 
     lv_obj_set_x(*lab, -23);
     lv_obj_set_y(*lab, -13);
     lv_obj_set_align(*lab, LV_ALIGN_CENTER);
-    lv_label_set_text(*lab, "0");
+    lv_label_set_text(*lab, " 0 ");
     lv_obj_set_style_border_width(*lab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(*lab, &Font_Mono_Bold_30, LV_PART_MAIN | LV_STATE_DEFAULT);
 

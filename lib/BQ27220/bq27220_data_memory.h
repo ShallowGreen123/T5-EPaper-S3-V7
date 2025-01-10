@@ -3,7 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum {
+typedef enum
+{
     BQ27220DMTypeEnd,
     BQ27220DMTypeWait,
     BQ27220DMTypeU8,
@@ -18,7 +19,10 @@ typedef enum {
     BQ27220DMTypePtr32,
 } BQ27220DMType;
 
-typedef enum {
+typedef enum
+{   
+    BQ27220DMAddressConfigurationRegistersOperationConfigA = 0x9206,
+    BQ27220DMAddressConfigurationRegistersOperationConfigB = 0x9208,
     BQ27220DMAddressGasGaugingCEDVProfile1GaugingConfig = 0x929B,
     BQ27220DMAddressGasGaugingCEDVProfile1FullChargeCapacity = 0x929D,
     BQ27220DMAddressGasGaugingCEDVProfile1DesignCapacity = 0x929F,
@@ -49,12 +53,12 @@ typedef enum {
     BQ27220DMAddressConfigurationDataInitialStandby = 0x923C,
 } BQ27220DMAddress;
 
-typedef struct BQ27220DMData BQ27220DMData;
-
-struct BQ27220DMData {
+struct BQ27220DMData
+{
     uint16_t type;
     uint16_t address;
-    union {
+    union
+    {
         uint8_t u8;
         uint16_t u16;
         uint32_t u32;
@@ -65,22 +69,27 @@ struct BQ27220DMData {
     } value;
 };
 
-typedef struct {
+typedef struct BQ27220DMData BQ27220DMData;
+
+typedef struct
+{
     // Low byte, Low bit first
-    const bool CCT        : 1;
-    const bool CSYNC      : 1;
-    const bool RSVD0      : 1;
-    const bool EDV_CMP    : 1;
-    const bool SC         : 1;
+    const bool CCT : 1;
+    const bool CSYNC : 1;
+    const bool RSVD0 : 1;
+    const bool EDV_CMP : 1;
+    const bool SC : 1;
     const bool FIXED_EDV0 : 1;
-    const uint8_t RSVD1   : 2;
+    const uint8_t RSVD1 : 2;
     // High byte, Low bit first
-    const bool FCC_LIM    : 1;
-    const bool RSVD2      : 1;
+    const bool FCC_LIM : 1;
+    const bool RSVD2 : 1;
     const bool FC_FOR_VDQ : 1;
-    const bool IGNORE_SD  : 1;
-    const bool SME0       : 1;
-    const uint8_t RSVD3   : 3;
+    const bool IGNORE_SD : 1;
+    const bool SME0 : 1;
+    const uint8_t RSVD3 : 3;
 } BQ27220DMGaugingConfig;
 
 _Static_assert(sizeof(BQ27220DMGaugingConfig) == 2, "Incorrect structure size");
+
+extern const BQ27220DMData gauge_data_memory[];
