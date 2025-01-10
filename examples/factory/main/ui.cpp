@@ -252,6 +252,7 @@ static lv_obj_t *menu_taskbar_charge = NULL;
 static lv_obj_t *menu_taskbar_battery = NULL;
 static lv_obj_t *menu_taskbar_battery_percent = NULL;
 static lv_obj_t *menu_taskbar_wifi = NULL;
+static lv_obj_t *menu_taskbar_sd = NULL;
 
 static int page_num = 1;
 static int page_curr = 0;
@@ -347,10 +348,12 @@ static void create0(lv_obj_t *parent)
     lv_obj_set_scrollbar_mode(menu_taskbar, LV_SCROLLBAR_MODE_OFF);
     lv_obj_clear_flag(menu_taskbar, LV_OBJ_FLAG_SCROLLABLE);
     
+    uint8_t h, m, s;
+    ui_clock_get_time(&h, &m, &s);
     menu_taskbar_time = lv_label_create(menu_taskbar);
     lv_obj_set_style_border_width(menu_taskbar_time, 0, 0);
     lv_obj_set_style_text_font(menu_taskbar_time, &Font_Mono_Bold_25, LV_PART_MAIN);
-    lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", 10, 19);
+    lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
     lv_obj_align(menu_taskbar_time, LV_ALIGN_LEFT_MID, 20, 0);
 
     lv_obj_t *status_parent = lv_obj_create(menu_taskbar);
@@ -371,19 +374,22 @@ static void create0(lv_obj_t *parent)
 
     menu_taskbar_wifi = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_wifi, "%s", LV_SYMBOL_WIFI);
-    lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+    // lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+
+    menu_taskbar_sd = lv_label_create(status_parent);
+    lv_label_set_text_fmt(menu_taskbar_sd, "%s", LV_SYMBOL_SD_CARD);
+    // lv_obj_add_flag(menu_taskbar_sd, LV_OBJ_FLAG_HIDDEN);
 
     menu_taskbar_charge = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
     lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
 
     menu_taskbar_battery = lv_label_create(status_parent);
-    lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_2);
+    lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
 
     menu_taskbar_battery_percent = lv_label_create(status_parent);
     lv_obj_set_style_text_font(menu_taskbar_battery_percent, &Font_Mono_Bold_25, LV_PART_MAIN);
-    lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", 50);
-
+    lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", ui_battery_27220_get_percent());
 
     // menu create
     menu_screen1 = lv_obj_create(parent);
@@ -1763,41 +1769,39 @@ static void battery_data_refr(void)
     }
 
     // BQ27220
-    if(battery_27220_is_vaild()) {
-        battery_set_line(batt_right[0], "Charge:", (battery_27220_is_chr() == true? "Charging" : "Not charged"));
+    if(ui_battery_27220_is_vaild()) {
+        battery_set_line(batt_right[0], "VBUS Input:", (ui_battery_27220_get_input() == true? "Connected" : "Disonnected"));
 
-        lv_snprintf(buf, line_max, "%.2fV", battery_27220_get_VOLT()/1000);
-        battery_set_line(batt_right[1], "VOLT:", buf);
-
-        lv_snprintf(buf, line_max, "%.2fV", battery_27220_get_VOLT_CHG()/1000);
-        battery_set_line(batt_right[2], "VOLT Charge:", buf);
-
-        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_ARG());
-        battery_set_line(batt_right[3], "CURR Average:", buf);
-
-        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_INS());
-        battery_set_line(batt_right[4], "CURR Instant:", buf);
-
-        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_STD());
-        battery_set_line(batt_right[5], "Curr Standby:", buf);
-
-        lv_snprintf(buf, line_max, "%.2fmA", battery_27220_get_CURR_CHG());
-        battery_set_line(batt_right[6], "Curr Charging:", buf);
-
-        lv_snprintf(buf, line_max, "%.2f", battery_27220_get_TEMP());
-        battery_set_line(batt_right[7], "TEMP:", buf);
-
-        lv_snprintf(buf, line_max, "%.2fmAh", battery_27220_get_BATT_CAP());
-        battery_set_line(batt_right[8], "CAP BATT:", buf);
-
-        lv_snprintf(buf, line_max, "%.2fmAh", battery_27220_get_BATT_CAP_FULL());
-        battery_set_line(batt_right[9], "CAP BATT Full:", buf);
-
-        if(battery_27220_get_TEMP() > 45.0){
-            battery_chg_discharge();
+        if(ui_battery_27220_get_input() == true ){
+            lv_snprintf(buf, line_max, "%s", (ui_battery_27220_get_charge_finish()? "Finsish":"Charging"));
         } else {
-            battery_chg_encharge();
+            lv_snprintf(buf, line_max, "%s", "Discharge");
         }
+        battery_set_line(batt_right[1], "Charing Status:", buf);
+
+        lv_snprintf(buf, line_max, "0x%x", ui_battery_27220_get_status());
+        battery_set_line(batt_right[2], "Battert Status:", buf);
+
+        lv_snprintf(buf, line_max, "%dmV", ui_battery_27220_get_voltage());
+        battery_set_line(batt_right[3], "Voltage:", buf);
+
+        lv_snprintf(buf, line_max, "%dmA", ui_battery_27220_get_current());
+        battery_set_line(batt_right[4], "Current:", buf);
+
+        lv_snprintf(buf, line_max, "%.2f C", (float)(ui_battery_27220_get_temperature() / 10.0 - 273.0));
+        battery_set_line(batt_right[5], "Temperature:", buf);
+
+        lv_snprintf(buf, line_max, "%dmAh", ui_battery_27220_get_remain_capacity());
+        battery_set_line(batt_right[6], "Capacity Remain:", buf);
+
+        lv_snprintf(buf, line_max, "%dmAh", ui_battery_27220_get_full_capacity());
+        battery_set_line(batt_right[7], "Capacity Full:", buf);
+
+        lv_snprintf(buf, line_max, "%d%%", ui_battery_27220_get_percent());
+        battery_set_line(batt_right[8], "Capacity Percent:", buf);
+
+        lv_snprintf(buf, line_max, "%d%%", ui_battery_27220_get_health());
+        battery_set_line(batt_right[9], "Capacity Health:", buf);
     }
 }
 
@@ -1882,7 +1886,7 @@ NO_BATTERY_BQ25896:
     lv_obj_set_align(scr7_cont_right, LV_ALIGN_BOTTOM_RIGHT);
 
     // right
-    if(!battery_27220_is_vaild()) {
+    if(!ui_battery_27220_is_vaild()) {
         label = scr7_create_label(scr7_cont_right);
         lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
         lv_label_set_text_fmt(label, "%s", "[0x55] BQ27220 NOT FOUND");
@@ -2144,34 +2148,22 @@ void menu_taskbar_update_timer_cb(lv_timer_t *t)
 
     // lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
     if(sec % 3 == 0) {
-        if(battery_25896_is_chr()){
+        // charge
+        if(ui_battery_27220_get_input()) {
             lv_obj_clear_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
-        }else{
+        } else {
             lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
         }
+        if(ui_battery_27220_get_charge_finish()){
+            lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_OK);
+        } else {
+            lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
+        }
     }
-    
-    if(sec % 20 == 0) {
-        int capacity = battery_get_capacity();
-        lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", capacity);
 
-        /**
-         * 0-19     empty
-         * 20-39    1/4
-         * 40-64    1/2
-         * 65-89    3/4
-         * 90-100   full
-        */
-        if(capacity < 20)
-            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_EMPTY);
-        else if(capacity < 40)
-            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_1);
-        else if(capacity < 65)
-            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_2);
-        else if(capacity < 90)
-            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_3);
-        else
-            lv_label_set_text_fmt(menu_taskbar_battery, "%s", LV_SYMBOL_BATTERY_FULL);
+    if(sec % 20 == 0) {
+        lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", ui_battery_27220_get_percent());
+        lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
     }
 
     sec++;

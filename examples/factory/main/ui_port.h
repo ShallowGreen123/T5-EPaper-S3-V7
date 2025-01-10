@@ -87,17 +87,19 @@ float battery_25896_get_targ_VOLT(void);
 float battery_25896_get_CHG_CURR(void);
 float battery_25896_get_PREC_CURR(void);
 /* 27220 */
-bool battery_27220_is_vaild(void);
-bool battery_27220_is_chr(void);
-float battery_27220_get_VOLT(void);
-float battery_27220_get_VOLT_CHG(void);
-float battery_27220_get_CURR_ARG(void);
-float battery_27220_get_CURR_INS(void);
-float battery_27220_get_CURR_STD(void);
-float battery_27220_get_CURR_CHG(void);
-float battery_27220_get_TEMP(void);
-float battery_27220_get_BATT_CAP(void);
-float battery_27220_get_BATT_CAP_FULL(void);
+bool ui_battery_27220_is_vaild(void);
+bool ui_battery_27220_get_input(void);
+bool ui_battery_27220_get_charge_finish(void);
+uint16_t ui_battery_27220_get_status(void);
+uint16_t ui_battery_27220_get_voltage(void);
+uint16_t ui_battery_27220_get_current(void);
+uint16_t ui_battery_27220_get_temperature(void);
+uint16_t ui_battery_27220_get_full_capacity(void);
+uint16_t ui_battery_27220_get_design_capacity(void);
+uint16_t ui_battery_27220_get_remain_capacity(void);
+uint16_t ui_battery_27220_get_percent(void);
+uint16_t ui_battery_27220_get_health(void);
+const char * ui_battert_27220_get_percent_level(void);
 
 // shutdown
 void ui_shutdown(void);

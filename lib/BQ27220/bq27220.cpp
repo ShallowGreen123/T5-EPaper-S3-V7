@@ -273,7 +273,7 @@ bool BQ27220::init(const BQ27220DMData *data_memory)
             Serial.printf("(%d) Seal failed\n", __LINE__);
             break;
         }
-
+        result = true;
     } while(0);
     return result;
 }
