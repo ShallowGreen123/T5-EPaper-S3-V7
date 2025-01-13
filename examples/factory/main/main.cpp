@@ -247,6 +247,39 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
         }
         // printf("[disp_flush] x1:%d, y1:%d, w:%d, h:%d\n", area->x1, area->y1, w, h);
     }
+    EpdRect rener_area = {
+        .x = 0,
+        .y = 0,
+        .width = epd_rotated_display_width(),
+        .height = epd_rotated_display_height(),
+    };
+
+    if(refresh_mode == REFRESH_MODE_FAST) 
+    {
+        // disp_full_refresh();
+        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+        epd_poweron();
+        // checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
+        epd_poweroff();
+    } 
+    else if(refresh_mode == REFRESH_MODE_NORMAL)
+    {
+        // disp_full_refresh();
+        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+        epd_poweron();
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        // checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
+        epd_poweroff();
+    } 
+    else if(refresh_mode == REFRESH_MODE_NEAT)
+    {
+        disp_full_refresh();
+        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+        epd_poweron();
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        epd_poweroff();
+    }
     /* Inform the graphics library that you are ready with the flushing */
     lv_disp_flush_ready(disp);
 }
@@ -288,15 +321,13 @@ static void flush_timer_cb(lv_timer_t *t)
     }
     // static int cnt = 0;
     // printf("[flush] %d\n", cnt++);
-    indev_touch_en();
-
     lv_timer_pause(flush_timer);
 }
 
 static void dips_render_start_cb(struct _lv_disp_drv_t * disp_drv)
 {
     if(flush_timer == NULL) {
-        flush_timer = lv_timer_create(flush_timer_cb, 30, NULL);
+        flush_timer = lv_timer_create(flush_timer_cb, 200, NULL);
         lv_timer_ready(flush_timer);
     } else {
         lv_timer_ready(flush_timer);
@@ -307,26 +338,20 @@ static void dips_render_start_cb(struct _lv_disp_drv_t * disp_drv)
 
 static void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
 {
-    int16_t  x, y;
+    static int16_t x=0, y=0;
 
-    if(indev_touch_enabled == false) 
-        return;
-
-    // int16_t x[5], y[5];
-    if(touch.isPressed()) {
+    if(touch.isPressed() && indev_touch_enabled) {
         // if(touch.getPoint(x, y)){
         if(touch.getPoint(&x, &y, 1)){
-            data->point.x = x;
-            data->point.y = y;
             data->state = LV_INDEV_STATE_PRESSED;
             Serial.printf("[input] X:%d Y:%d\n", data->point.x, data->point.y);
         }
     } 
     else{
-        data->point.x = 0;
-        data->point.y = 0;
-        data->state = LV_INDEV_STATE_RELEASED; 
+        data->state = LV_INDEV_STATE_RELEASED;
     }
+    data->point.x = x;
+    data->point.y = y;
 }
 
 static void lv_port_disp_init(void)
@@ -345,7 +370,7 @@ static void lv_port_disp_init(void)
     disp_drv.hor_res = epd_rotated_display_width();
     disp_drv.ver_res = epd_rotated_display_height();
     disp_drv.flush_cb = disp_flush;
-    disp_drv.render_start_cb = dips_render_start_cb;
+    // disp_drv.render_start_cb = dips_render_start_cb;
     disp_drv.draw_buf = &draw_buf;
     disp_drv.full_refresh = 1;
     lv_disp_drv_register(&disp_drv);
@@ -370,7 +395,6 @@ static bool touch_gt911_init(void)
             delay(1000);
         }
     }
-
     Serial.println("Init GT911 Sensor success!");
 
     // Set the center button to trigger the callback , Only for specific devices, e.g LilyGo-EPD47 S3 GT911
@@ -393,6 +417,7 @@ static bool touch_gt911_init(void)
         epd_poweroff();
     }, NULL);
 
+    touch.setInterruptMode(LOW_LEVEL_QUERY);
     return true;
 }
 
@@ -522,19 +547,7 @@ static bool bq25896_init(void)
 
 static bool bq27220_init(void)
 {
-    bool result = bq27220.init();
-    if (result == false) {
-        // while (1) {
-        //     Serial.println("BQ27220 is not online...");
-        //     delay(1000);
-        // }
-        return false;
-    }
-    Serial.println("BQ27220 is online...");
-    Serial.println("BQ27220 is online...");
-    Serial.println("BQ27220 is online...");
-    Serial.println("BQ27220 is online...");
-    return true;
+    return bq27220.init();;
 }
 
 static bool lora_sx1262_init(void)

@@ -92,7 +92,7 @@ bool ui_battery_27220_get_input(void);
 bool ui_battery_27220_get_charge_finish(void);
 uint16_t ui_battery_27220_get_status(void);
 uint16_t ui_battery_27220_get_voltage(void);
-uint16_t ui_battery_27220_get_current(void);
+int16_t ui_battery_27220_get_current(void);
 uint16_t ui_battery_27220_get_temperature(void);
 uint16_t ui_battery_27220_get_full_capacity(void);
 uint16_t ui_battery_27220_get_design_capacity(void);

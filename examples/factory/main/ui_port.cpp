@@ -373,7 +373,7 @@ uint16_t ui_battery_27220_get_status(void)
     return batt.full;
 }
 uint16_t ui_battery_27220_get_voltage(void) { return bq27220.getVoltage(); }
-uint16_t ui_battery_27220_get_current(void) { return bq27220.getCurrent(); }
+int16_t ui_battery_27220_get_current(void) { return bq27220.getCurrent(); }
 uint16_t ui_battery_27220_get_temperature(void) { return bq27220.getTemperature(); }
 uint16_t ui_battery_27220_get_full_capacity(void) { return bq27220.getFullChargeCapacity(); }
 uint16_t ui_battery_27220_get_design_capacity(void) { return bq27220.getDesignCapacity(); }

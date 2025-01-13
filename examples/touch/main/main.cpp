@@ -32,17 +32,10 @@
 #include <Arduino.h>
 #include "TouchDrvGT911.hpp"
 
-#define SENSOR_SDA  18
-#define SENSOR_SCL  8
-#define SENSOR_IRQ  17
-#define SENSOR_RST  16
-
-
-// #define SENSOR_SDA  39
-// #define SENSOR_SCL  40
-// #define SENSOR_IRQ  3
-// #define SENSOR_RST  9
-
+#define SENSOR_SDA  39
+#define SENSOR_SCL  40
+#define SENSOR_IRQ  3
+#define SENSOR_RST  9
 
 TouchDrvGT911 touch;
 int16_t x[5], y[5];
@@ -82,7 +75,7 @@ void idf_setup()
     // touch.setInterruptMode(RISING);
 
     // Keep high level when idle, and switch to low level when touched
-    // touch.setInterruptMode(LOW_LEVEL_QUERY);
+    touch.setInterruptMode(LOW_LEVEL_QUERY);
 
     // Maintains high level when idle, and is triggered by the falling edge after being touched. The frequency is 100HZ and is triggered once. Maintains 10ms in the low level interval
     // touch.setInterruptMode(FALLING);

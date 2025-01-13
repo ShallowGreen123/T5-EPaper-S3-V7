@@ -14,6 +14,7 @@ char global_buf[GLOBAL_BUF_LEN];
 
 static lv_timer_t *touch_chk_timer = NULL;
 static lv_timer_t *taskbar_update_timer = NULL;
+uint16_t taskbar_statue[TASKBAR_ID_MAX] = {0};
 //************************************[ Other fun ]******************************************
 #if 1
 void scr_back_btn_create(lv_obj_t *parent, const char *text, lv_event_cb_t cb)
@@ -348,12 +349,9 @@ static void create0(lv_obj_t *parent)
     lv_obj_set_scrollbar_mode(menu_taskbar, LV_SCROLLBAR_MODE_OFF);
     lv_obj_clear_flag(menu_taskbar, LV_OBJ_FLAG_SCROLLABLE);
     
-    uint8_t h, m, s;
-    ui_clock_get_time(&h, &m, &s);
     menu_taskbar_time = lv_label_create(menu_taskbar);
     lv_obj_set_style_border_width(menu_taskbar_time, 0, 0);
     lv_obj_set_style_text_font(menu_taskbar_time, &Font_Mono_Bold_25, LV_PART_MAIN);
-    lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
     lv_obj_align(menu_taskbar_time, LV_ALIGN_LEFT_MID, 20, 0);
 
     lv_obj_t *status_parent = lv_obj_create(menu_taskbar);
@@ -385,11 +383,9 @@ static void create0(lv_obj_t *parent)
     lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
 
     menu_taskbar_battery = lv_label_create(status_parent);
-    lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
 
     menu_taskbar_battery_percent = lv_label_create(status_parent);
     lv_obj_set_style_text_font(menu_taskbar_battery_percent, &Font_Mono_Bold_25, LV_PART_MAIN);
-    lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", ui_battery_27220_get_percent());
 
     // menu create
     menu_screen1 = lv_obj_create(parent);
@@ -485,7 +481,15 @@ static void entry0(void) {
     menu_gesture_dir_cb = menu_get_gesture_dir;
     lv_timer_resume(touch_chk_timer);
     lv_timer_resume(taskbar_update_timer);
- }
+
+    uint8_t h, m, s;
+    ui_clock_get_time(&h, &m, &s);
+    lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
+
+    lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
+
+    lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", ui_battery_27220_get_percent());
+}
 static void exit0(void) {
     menu_gesture_dir_cb = NULL;
     lv_timer_pause(touch_chk_timer);
@@ -1336,8 +1340,6 @@ static void scr4_btn_event_cb(lv_event_t * e)
 
 static void create4(lv_obj_t *parent) 
 {
-    ui_indev_touch_dis();
-
     setting_list = lv_list_create(parent);
     lv_obj_set_size(setting_list, lv_pct(93), lv_pct(91));
     lv_obj_align(setting_list, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -1788,7 +1790,7 @@ static void battery_data_refr(void)
         lv_snprintf(buf, line_max, "%dmA", ui_battery_27220_get_current());
         battery_set_line(batt_right[4], "Current:", buf);
 
-        lv_snprintf(buf, line_max, "%.2f C", (float)(ui_battery_27220_get_temperature() / 10.0 - 273.0));
+        lv_snprintf(buf, line_max, "%.2fC", (float)(ui_battery_27220_get_temperature() / 10.0 - 273.0));
         battery_set_line(batt_right[5], "Temperature:", buf);
 
         lv_snprintf(buf, line_max, "%dmAh", ui_battery_27220_get_remain_capacity());
@@ -2128,45 +2130,58 @@ static void indev_get_gesture_dir(lv_timer_t *t)
 
 void menu_taskbar_update_timer_cb(lv_timer_t *t)
 {
+    // update taskbar buf
     static int sec = 0;
+    sec++;
 
-    if(sec % 30 == 0) {
-        uint8_t h, m, s;
+    uint8_t h = 0, m = 0, s = 0;
+    bool charge = 0;
+    bool finish = 0;
+    int percent = 0;
+
+    
+    if(sec % 10 == 0)
+    {
         ui_clock_get_time(&h, &m, &s);
-        lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
+        finish = ui_battery_27220_get_charge_finish();
+        percent = ui_battery_27220_get_percent();
+
+        if(taskbar_statue[TASKBAR_ID_TIME_MINUTE] != m)
+        {
+            lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
+            taskbar_statue[TASKBAR_ID_TIME_HOUR] = h;
+            taskbar_statue[TASKBAR_ID_TIME_MINUTE] = m;
+        }
+
+        if(taskbar_statue[TASKBAR_ID_CHARGE_FINISH] != finish) 
+        {
+            if(finish){
+                lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_OK);
+            } else {
+                lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
+            }
+            taskbar_statue[TASKBAR_ID_CHARGE_FINISH] = finish;
+        }
+
+        if(taskbar_statue[TASKBAR_ID_BATTERY_PERCENT] != percent) 
+        {
+            lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", percent);
+            lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
+            taskbar_statue[TASKBAR_ID_BATTERY_PERCENT] = percent;
+        }
     }
 
-    // static int wifi_st = 0;
-    // if(wifi_st % 2 == 0){
-    //     lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
-    //     // lv_label_set_text_fmt(menu_taskbar_wifi, "%s", LV_SYMBOL_WIFI);
-    // }
-    // else{
-    //     lv_obj_clear_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
-    // }
-    // wifi_st++;
-
-    // lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
-    if(sec % 3 == 0) {
-        // charge
-        if(ui_battery_27220_get_input()) {
+    charge = ui_battery_27220_get_input();
+    if(taskbar_statue[TASKBAR_ID_CHARGE] != charge) 
+    {
+        if(charge) {
             lv_obj_clear_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
         } else {
             lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
         }
-        if(ui_battery_27220_get_charge_finish()){
-            lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_OK);
-        } else {
-            lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
-        }
+        taskbar_statue[TASKBAR_ID_CHARGE] = charge;
     }
-
-    if(sec % 20 == 0) {
-        lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", ui_battery_27220_get_percent());
-        lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
-    }
-
-    sec++;
+    // taskbar_statue[TASKBAR_ID_WIFI] = ;
 }
 
 void ui_entry(void)
