@@ -26,6 +26,7 @@
 
 // io_extend
 extern "C" {
+    void io_extend_lora_gps_power_on(bool en);
     uint8_t read_io(int io);
     void set_config(i2c_port_t port, uint8_t config_value, int high_port);
     bool button_read(void);

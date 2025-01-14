@@ -78,31 +78,28 @@ bool disp_refr_is_busy = false;
  * *******************************************************************************/
 void gps_task(void *param)
 {
-    // vTaskSuspend(nfc_handle);
-    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
-
-    // set_config(0, 0x04, 1);
+    // SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
     while (1)
     {
-        // while (SerialGPS.available())
-        // {
-        //     SerialMon.write(SerialGPS.read());
-        // }
-        // while (SerialMon.available())
-        // {
-        //     SerialGPS.write(SerialMon.read());
-        // }
-        // delay(500);
-
-        if (digitalRead(PCA9535_INT) == LOW)
+        while (SerialGPS.available())
         {
-            if(button_read()) {
-                Serial.printf("Button Press\n");
-            }else{
-                Serial.printf("Button Release\n");
-            }
+            SerialMon.write(SerialGPS.read());
         }
-        delay(10);
+        while (SerialMon.available())
+        {
+            SerialGPS.write(SerialMon.read());
+        }
+        delay(500);
+
+        // if (digitalRead(PCA9535_INT) == LOW)
+        // {
+        //     if(button_read()) {
+        //         Serial.printf("Button Press\n");
+        //     }else{
+        //         Serial.printf("Button Release\n");
+        //     }
+        // }
+        // delay(10);
     }
 }
 
@@ -709,7 +706,9 @@ static bool gps_init(void)
     int i = 10;
     bool reply = false;
 
-    Serial.println("\nTesting Modem Response...\n");
+    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
+
+    Serial.println("\nTesting GPS Modem Response...\n");
     Serial.println("****");
     while (i)
     {
@@ -770,7 +769,9 @@ void idf_setup()
 
     screen_init();
 
-    // xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
+    io_extend_lora_gps_power_on(true);
+
+    xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
     // xTaskCreate(lora_task, "lora_task", 1024 * 3, NULL, LORA_PRIORITY, &lora_handle);
 
     printf("LVGL Init\n");

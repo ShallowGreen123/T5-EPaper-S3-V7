@@ -372,11 +372,11 @@ static void create0(lv_obj_t *parent)
 
     menu_taskbar_wifi = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_wifi, "%s", LV_SYMBOL_WIFI);
-    // lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
 
     menu_taskbar_sd = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_sd, "%s", LV_SYMBOL_SD_CARD);
-    // lv_obj_add_flag(menu_taskbar_sd, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(menu_taskbar_sd, LV_OBJ_FLAG_HIDDEN);
 
     menu_taskbar_charge = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);

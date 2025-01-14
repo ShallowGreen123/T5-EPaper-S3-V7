@@ -20,7 +20,9 @@
 // include the library
 #include <RadioLib.h>
 #include "utilities.h"
+#include "ExtensionIOXL9555.hpp"
 
+ExtensionIOXL9555 io;
 // SX1262 has the following connections:
 // NSS pin:   10
 // DIO1 pin:  2
@@ -38,6 +40,32 @@ SX1262 radio = new Module(LORA_CS, LORA_IRQ, LORA_RST, LORA_BUSY);
 // save transmission state between loops
 int transmissionState = RADIOLIB_ERR_NONE;
 
+
+void io_extend_lora_gps_power_on(bool en)
+{
+    const uint8_t chip_address = XL9555_SLAVE_ADDRESS0;
+
+    if (!io.init(Wire, BOARD_SDA, BOARD_SCL, chip_address)) {
+        while (1) {
+            Serial.println("Failed to find XL9555 - check your wiring!");
+            delay(1000);
+        }
+    }
+
+    // Set PORT0 as input,mask = 0xFF = all pin input
+    io.configPort(ExtensionIOXL9555::PORT0, 0x00);
+    // Set PORT1 as input,mask = 0xFF = all pin input
+    io.configPort(ExtensionIOXL9555::PORT1, 0xFF);
+
+    Serial.println("Power on LoRa and GPS!");
+    if(en)
+        io.digitalWrite(ExtensionIOXL9555::IO0, HIGH);
+    else 
+        io.digitalWrite(ExtensionIOXL9555::IO0, LOW);
+
+    delay(1500);
+}
+
 void setup()
 {
     // lora and sd use the same spi, in order to avoid mutual influence;
@@ -48,6 +76,9 @@ void setup()
     digitalWrite(SD_CS, HIGH);
 
     Serial.begin(115200);
+
+    // This must be turned on, otherwise LoRa and GPS will not work
+    io_extend_lora_gps_power_on(true);
 
     SPI.begin(BOARD_SPI_SCLK, BOARD_SPI_MISO, BOARD_SPI_MOSI);
 

@@ -406,15 +406,12 @@ void ui_sleep(void)
 
     digitalWrite(TOUCH_RST, LOW); 
     digitalWrite(LORA_RST, LOW); 
-
-    pinMode(9, OUTPUT);
-    digitalWrite(9, LOW); 
     
     gpio_hold_en((gpio_num_t)TOUCH_RST);
     gpio_hold_en((gpio_num_t)LORA_RST);
-    gpio_hold_en((gpio_num_t)9);
     gpio_deep_sleep_hold_en();
 
+    io_extend_lora_gps_power_on(false);
     analogWrite(BL_EN, 0);
 
     epd_poweroff();
