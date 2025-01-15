@@ -108,6 +108,16 @@ void ui_clock_get_data(uint8_t *year, uint8_t *month, uint8_t *day, uint8_t *wee
     printf("y=%d, m=%d, d=%d, w=%d\n", *year, *month, *day, *week);
 }
 //************************************[ screen 2 ]****************************************** lora
+void ui_lora_recv_suspend(void)
+{
+    lora_recv_suspend();
+}
+
+void ui_lora_recv_resume(void)
+{
+    lora_recv_resume();
+}
+
 void ui_lora_set_mode(int mode)
 {
     lora_set_mode(mode);
@@ -120,10 +130,17 @@ void ui_lora_send(const char *str)
 {
     lora_transmit(str);
 }
-bool ui_lora_recv(String *str)
+bool ui_lora_recv(const char **str, int *rssi)
 {
-    // return lora_receive(str);
-    return false;
+    return lora_get_recv(str, rssi);
+}
+void ui_lora_recv_loop(void)
+{
+    // lora_receive_loop();
+}
+void ui_lora_clean_recv_flag(void)
+{
+    lora_set_recv_flag();
 }
 //************************************[ screen 3 ]****************************************** sd_card
 void ui_sd_read(void)

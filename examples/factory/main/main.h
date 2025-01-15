@@ -57,6 +57,10 @@ enum {
 
 extern bool peri_buf[E_PERI_MAX];
 
+// task
+extern TaskHandle_t gps_handle;
+// extern TaskHandle_t lora_handle;
+
 // lora
 extern SX1262 radio;
 

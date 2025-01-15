@@ -29,14 +29,9 @@
 #include <SPI.h>
 #include <driver/i2c.h>
 
-#define NFC_PRIORITY     (configMAX_PRIORITIES - 1)
-#define LORA_PRIORITY    (configMAX_PRIORITIES - 2)
-#define WS2812_PRIORITY  (configMAX_PRIORITIES - 3)
-#define BATTERY_PRIORITY (configMAX_PRIORITIES - 4)
-#define INFARED_PRIORITY (configMAX_PRIORITIES - 5)
 
 TaskHandle_t gps_handle;
-TaskHandle_t lora_handle;
+// TaskHandle_t lora_handle;
 
 // peripheral
 bool peri_buf[E_PERI_MAX] = {0};
@@ -781,7 +776,7 @@ void idf_setup()
     ui_setting_set_backlight(backlight);
 
     screen_init();
-    // io_extend_lora_gps_power_on(true);
+    io_extend_lora_gps_power_on(true);
 
     peri_buf[E_PERI_INK_POWER]  = false; 
     peri_buf[E_PERI_BQ25896]    = bq25896_init();   // PMU --- 0x6B

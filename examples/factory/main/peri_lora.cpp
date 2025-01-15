@@ -4,6 +4,7 @@
 #include "utilities.h"
 #include "peripheral.h"
 
+TaskHandle_t lora_handle;
 
 static SX1262 radio = new Module(BOARD_LORA_CS, BOARD_LORA_IRQ, BOARD_LORA_RST, BOARD_LORA_BUSY);
 static int lora_mode = LORA_MODE_SEND;
@@ -25,6 +26,15 @@ static volatile bool receivedFlag = false;
 
 static void set_receive_flag(void){
     receivedFlag = true;
+}
+
+void lora_task(void *param)
+{
+    while (1)
+    {
+        lora_receive_loop();
+        delay(500);
+    }
 }
 
 bool lora_sx1262_init(void)
@@ -151,6 +161,10 @@ bool lora_sx1262_init(void)
     // 256 characters long
     transmissionState = radio.startTransmit("Hello World!");
 
+    Serial.print(F("[SX1262] recv task Suspend ... "));
+    xTaskCreate(lora_task, "lora_task", 1024 * 3, NULL, LORA_PRIORITY, &lora_handle);
+    vTaskSuspend(lora_handle);
+
     return true;
 }
 
@@ -238,4 +252,13 @@ void lora_set_recv_flag(void)
 void lora_sleep(void)
 {
     radio.sleep();
+}
+
+void lora_recv_suspend(void)
+{
+    vTaskSuspend(lora_handle);
+}
+void lora_recv_resume(void)
+{
+    vTaskResume(lora_handle);
 }

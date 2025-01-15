@@ -144,6 +144,9 @@ static void epd_board_init(uint32_t epd_row_width) {
 
     // set all epdiy lines to output except TPS interrupt + PWR good
     ESP_ERROR_CHECK(pca9555_set_config(config_reg.port, CFG_PIN_PWRGOOD | CFG_PIN_INT | __CFG_PIN_STV, 1));
+    ESP_ERROR_CHECK(pca9555_set_config(config_reg.port, 0, 0));
+
+    pca9555_set_value(config_reg.port, 0xff, 0);
 
     const EpdDisplay_t* display = epd_get_display();
 

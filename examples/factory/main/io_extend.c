@@ -34,16 +34,16 @@ void io_extend_set_config(uint8_t port, uint8_t mask)
 
 void io_extend_lora_gps_power_on(bool en)
 {
-    uint8_t value = 0;
+    uint8_t value = 0xFF;
     uint8_t io_val = pca9555_read_input(BOARD_I2C_PORT, 0);
 
     printf("io_extend_lora_gps_power_on : 0x%x\n", io_val);
-    if(en) {
-        value = io_val | PCA_PIN_P00;
-    } else {
-        value = io_val & ~(PCA_PIN_P00);
-    }
-    pca9555_set_value(BOARD_I2C_PORT, value, 0);
+    // if(en) {
+    //     value = io_val | PCA_PIN_P00;
+    // } else {
+    //     value = io_val & ~(PCA_PIN_P00);
+    // }
+    // pca9555_set_value(BOARD_I2C_PORT, value, 0);
 }
 
 bool button_read(void)

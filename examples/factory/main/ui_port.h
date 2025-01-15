@@ -36,15 +36,14 @@ void ui_clock_get_data(uint8_t *year, uint8_t *month, uint8_t *day, uint8_t *wee
 #define LORA_MODE_SEND 0
 #define LORA_MODE_RECV 1
 
+void ui_lora_recv_suspend(void);
+void ui_lora_recv_resume(void);
 void ui_lora_set_mode(int mode);
 int ui_lora_get_mode(void);
 void ui_lora_send(const char *str);
-bool ui_lora_recv(String *str);
-
-// float ui_lora_get_freq(void);
-// void ui_lora_recv_loop(void);
-// bool ui_lora_get_recv(const char **str, int *rssi);
-// void ui_lora_set_recv_flag(void);
+bool ui_lora_recv(const char **str, int *rssi);
+void ui_lora_recv_loop(void);
+void ui_lora_clean_recv_flag(void);
 
 // sd
 void ui_sd_read(void);

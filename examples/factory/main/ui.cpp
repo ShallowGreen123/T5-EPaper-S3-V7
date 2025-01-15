@@ -900,6 +900,8 @@ static scr_lifecycle_t screen2 = {
 #if 1
 static lv_obj_t *scr2_1_cont;
 static lv_timer_t *scr2_1_timer = NULL;
+static lv_obj_t *scr2_1_sw_btn;
+static lv_obj_t *scr2_1_sw_btn_info;
 static int scr2_1_cnt = 0;
 
 static void scr2_1_btn_event_cb(lv_event_t * e)
@@ -908,6 +910,26 @@ static void scr2_1_btn_event_cb(lv_event_t * e)
         scr_mgr_pop(false);
     }
 }
+
+static void lora_auto_send_event(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        if(ui_lora_get_mode() == LORA_MODE_SEND) {
+            ui_lora_set_mode(LORA_MODE_RECV);
+            lv_label_set_text(scr2_1_sw_btn_info, "Recv");
+            ui_lora_recv_resume();
+        } else if(ui_lora_get_mode() == LORA_MODE_RECV) {
+            ui_lora_set_mode(LORA_MODE_SEND);
+            lv_label_set_text(scr2_1_sw_btn_info, "Send");
+            ui_lora_recv_suspend();
+        }
+    }
+    for(int i = 0; i < ARRAY_LEN(scr2_lab_buf); i++){
+        lv_label_set_text_fmt(scr2_lab_buf[i], " ", i);
+    }
+    scr2_1_cnt = 0;
+}
+
 
 static void lora_timer_event(lv_timer_t *t)
 {
@@ -921,25 +943,23 @@ static void lora_timer_event(lv_timer_t *t)
         lv_snprintf(buf, 32, "# %d T5-EPaper-S3", data++);
         lv_label_set_text_fmt(scr2_lab_buf[scr2_1_cnt], "send-> %s", buf);
         ui_lora_send(buf);
+    }
+    else if(ui_lora_get_mode() == LORA_MODE_RECV)
+    {
+        if(ui_lora_recv(&recv_info, &recv_rssi))
+        {
+            ui_lora_clean_recv_flag();
+            lv_label_set_text_fmt(scr2_lab_buf[scr2_1_cnt], "recv-> %s [%d]", recv_info, recv_rssi);
+        }
+    }
 
+    if((ui_lora_get_mode() == LORA_MODE_SEND) || (ui_lora_get_mode() == LORA_MODE_RECV)) 
+    {
         scr2_1_cnt++;
         if(scr2_1_cnt >= ARRAY_LEN(scr2_lab_buf)) {
             scr2_1_cnt = 0;
         }
     }
-    // else if(ui_lora_get_mode() == LORA_MODE_RECV)
-    // {
-    //     if(ui_lora_get_recv(&recv_info, &recv_rssi))
-    //     {
-    //         ui_lora_set_recv_flag();
-    //         lv_label_set_text_fmt(lora_lab_buf[lora_cnt], "recv-> %s [%d]", recv_info, recv_rssi);
-
-    //         lora_cnt++;
-    //         if(lora_cnt >= GET_BUFF_LEN(lora_lab_buf)) {
-    //             lora_cnt = 0;
-    //         }
-    //     }
-    // }
 }
 
 static lv_obj_t * scr2_1_create_label(lv_obj_t *parent)
@@ -971,10 +991,22 @@ static void create2_1(lv_obj_t *parent)
         scr2_lab_buf[i] = scr2_1_create_label(scr2_1_cont);
         lv_obj_set_width(scr2_lab_buf[i], LV_SIZE_CONTENT);   /// 1
         lv_obj_set_height(scr2_lab_buf[i], LV_SIZE_CONTENT);    /// 1
-        lv_obj_set_style_border_width(scr2_lab_buf[i], 1, LV_PART_MAIN);
+        lv_obj_set_style_border_width(scr2_lab_buf[i], 0, LV_PART_MAIN);
         lv_label_set_long_mode(scr2_lab_buf[i], LV_LABEL_LONG_DOT);
         lv_label_set_text_fmt(scr2_lab_buf[i], " ", i);
     }
+
+    scr2_1_sw_btn = lv_btn_create(parent);
+    lv_obj_set_size(scr2_1_sw_btn, 100, 50);
+    lv_obj_set_style_radius(scr2_1_sw_btn, 5, LV_PART_MAIN);
+    lv_obj_set_style_border_width(scr2_1_sw_btn, 2, LV_PART_MAIN);
+    scr2_1_sw_btn_info = lv_label_create(scr2_1_sw_btn);
+    lv_obj_set_style_text_font(scr2_1_sw_btn_info, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_obj_set_style_text_align(scr2_1_sw_btn_info, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_text_fmt(scr2_1_sw_btn_info, "%s", (ui_lora_get_mode() == LORA_MODE_SEND ? "Send" : "Recv"));
+    lv_obj_center(scr2_1_sw_btn_info);
+    lv_obj_align(scr2_1_sw_btn, LV_ALIGN_TOP_RIGHT, -10, 20);
+    lv_obj_add_event_cb(scr2_1_sw_btn, lora_auto_send_event, LV_EVENT_CLICKED, NULL);
 
     scr_back_btn_create(parent, ("Auto Send"), scr2_1_btn_event_cb);
 }
