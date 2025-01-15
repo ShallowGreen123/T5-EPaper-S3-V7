@@ -3,6 +3,9 @@
 #define BOARD_SCL  (40)
 #define BOARD_SDA  (39)
 
+#define BOARD_GPS_RXD 44
+#define BOARD_GPS_TXD 43
+
 #define BOARD_SPI_MISO    (21)
 #define BOARD_SPI_MOSI    (13)
 #define BOARD_SPI_SCLK    (14)

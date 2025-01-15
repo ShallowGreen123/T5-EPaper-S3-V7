@@ -21,6 +21,7 @@
 #include "main.h"
 #include "ui.h"
 #include "ui_port.h"
+#include "peripheral.h"
 
 // Arduino
 #include <Arduino.h>
@@ -41,10 +42,10 @@ TaskHandle_t lora_handle;
 bool peri_buf[E_PERI_MAX] = {0};
 
 // lora
-SX1262 radio = new Module(LORA_CS, LORA_IRQ, LORA_RST, LORA_BUSY);
-volatile bool transmittedFlag = false;
-int transmissionState = RADIOLIB_ERR_NONE;
-int count = 0;// counter to keep track of transmitted packets
+// SX1262 radio = new Module(BOARD_LORA_CS, BOARD_LORA_IRQ, BOARD_LORA_RST, BOARD_LORA_BUSY);
+// volatile bool transmittedFlag = false;
+// int transmissionState = RADIOLIB_ERR_NONE;
+// int count = 0;// counter to keep track of transmitted packets
 
 // bq25896
 XPowersPPM PPM;
@@ -78,7 +79,8 @@ bool disp_refr_is_busy = false;
  * *******************************************************************************/
 void gps_task(void *param)
 {
-    // SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
+    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
+
     while (1)
     {
         while (SerialGPS.available())
@@ -103,75 +105,74 @@ void gps_task(void *param)
     }
 }
 
-void lora_task(void *param)
-{
-    while (1)
-    {
-        if(peri_buf[E_PERI_LORA] == false)
-        {
-            Serial.println("LoRa Init Error!");
-            delay(1000);
-        }
-        else {
-            // check if the previous transmission finished
-            if (transmittedFlag)
-            {
-                // reset flag
-                transmittedFlag = false;
+// void lora_task(void *param)
+// {
+//     while (1)
+//     {
+//         if(peri_buf[E_PERI_LORA])
+//         {
+//             // check if the previous transmission finished
+//             if (transmittedFlag)
+//             {
+//                 // reset flag
+//                 transmittedFlag = false;
 
-                if (transmissionState == RADIOLIB_ERR_NONE)
-                {
-                    // packet was successfully sent
-                    Serial.println(F("transmission finished!"));
+//                 if (transmissionState == RADIOLIB_ERR_NONE)
+//                 {
+//                     // packet was successfully sent
+//                     Serial.println(F("transmission finished!"));
 
-                    // NOTE: when using interrupt-driven transmit method,
-                    //       it is not possible to automatically measure
-                    //       transmission data rate using getDataRate()
-                }
-                else
-                {
-                    Serial.print(F("failed, code "));
-                    Serial.println(transmissionState);
-                }
+//                     // NOTE: when using interrupt-driven transmit method,
+//                     //       it is not possible to automatically measure
+//                     //       transmission data rate using getDataRate()
+//                 }
+//                 else
+//                 {
+//                     Serial.print(F("failed, code "));
+//                     Serial.println(transmissionState);
+//                 }
 
-                // clean up after transmission is finished
-                // this will ensure transmitter is disabled,
-                // RF switch is powered down etc.
-                radio.finishTransmit();
+//                 // clean up after transmission is finished
+//                 // this will ensure transmitter is disabled,
+//                 // RF switch is powered down etc.
+//                 radio.finishTransmit();
 
-                // wait a second before transmitting again
-                delay(1000);
+//                 // wait a second before transmitting again
+//                 delay(1000);
 
-                // send another one
-                Serial.print(F("[SX1262] Sending another packet ... "));
+//                 // send another one
+//                 Serial.print(F("[SX1262] Sending another packet ... "));
 
-                // you can transmit C-string or Arduino string up to
-                // 256 characters long
-                String str = "Hello World! #" + String(count++);
-                transmissionState = radio.startTransmit(str);
+//                 // you can transmit C-string or Arduino string up to
+//                 // 256 characters long
+//                 String str = "Hello World! #" + String(count++);
+//                 transmissionState = radio.startTransmit(str);
 
-                // you can also transmit byte array up to 256 bytes long
-                /*
-                byte byteArr[] = {0x01, 0x23, 0x45, 0x67,
-                                    0x89, 0xAB, 0xCD, 0xEF};
-                transmissionState = radio.startTransmit(byteArr, 8);
-                */
-            }
-            delay(1);
-        }
-        
-    }
-}
+//                 // you can also transmit byte array up to 256 bytes long
+//                 /*
+//                 byte byteArr[] = {0x01, 0x23, 0x45, 0x67,
+//                                     0x89, 0xAB, 0xCD, 0xEF};
+//                 transmissionState = radio.startTransmit(byteArr, 8);
+//                 */
+//             }
+//             delay(1);
+//         }
+//         else {
+//             Serial.println("LoRa Init Error!");
+//             delay(1000);
+//         }
+//     }
+// }
 
 /*********************************************************************************
  *                              FUNCTION
  * *******************************************************************************/
 
-void setFlag(void)
-{
-    // we sent a packet, set the flag
-    transmittedFlag = true;
-}
+// void setFlag(void)
+// {
+//     // we sent a packet, set the flag
+//     transmittedFlag = true;
+// }
 
 static inline void checkError(enum EpdDrawError err) {
     if (err != EPD_DRAW_SUCCESS) {
@@ -384,7 +385,7 @@ static void lv_port_disp_init(void)
 static bool touch_gt911_init(void)
 {
     // Touch --- 0x5D
-    touch.setPins(TOUCH_RST, TOUCH_INT);
+    touch.setPins(BOARD_TOUCH_RST, BOARD_TOUCH_INT);
     if (!touch.begin(Wire, GT911_SLAVE_ADDRESS_L, BOARD_SDA, BOARD_SCL))
     {
         while (1) {
@@ -420,9 +421,9 @@ static bool touch_gt911_init(void)
 
 static bool rtc_pcf8563_init(void)
 {
-    pinMode(RTC_IRQ, INPUT_PULLUP);
+    pinMode(BOARD_RTC_IRQ, INPUT_PULLUP);
 
-    if (!rtc.begin(Wire, PCF8563_SLAVE_ADDRESS, RTC_SDA, RTC_SCL)) {
+    if (!rtc.begin(Wire, PCF8563_SLAVE_ADDRESS, BOARD_RTC_SDA, BOARD_RTC_SCL)) {
         Serial.println("Failed to find PCF8563 - check your wiring!");
         // while (1) {
         //     delay(1000);
@@ -464,7 +465,7 @@ static bool screen_init(void)
     // The display bus settings for V7 may be conservative, you can manually
     // override the bus speed to tune for speed, i.e., if you set the PSRAM speed
     // to 120MHz.
-    // epd_set_lcd_pixel_clock_MHz(17);
+    epd_set_lcd_pixel_clock_MHz(17);
 
     heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
     heap_caps_print_heap_info(MALLOC_CAP_SPIRAM);
@@ -547,136 +548,153 @@ static bool bq27220_init(void)
     return bq27220.init();;
 }
 
-static bool lora_sx1262_init(void)
-{
-    // initialize SX1262 with default settings
-    Serial.print(F("[SX1262] Initializing ... "));
-    int state = radio.begin();
-    if (state == RADIOLIB_ERR_NONE)
-    {
-        Serial.println(F("success!"));
-    }
-    else
-    {
-        Serial.print(F("failed, code "));
-        Serial.println(state);
-        return false;
-        // while (true)
-            ;
-    }
+// void lora_transmit(const char *str)
+// {
+//     if(transmittedFlag){
+//         transmittedFlag = false;
+//         if(transmissionState == RADIOLIB_ERR_NONE){
+//             Serial.println(F("transmission finished!"));
+//         } else {
+//             Serial.print(F("failed, code "));
+//             Serial.println(transmissionState);
+//         }
 
-    // set the function that will be called
-    // when packet transmission is finished
-    radio.setPacketSentAction(setFlag);
+//         radio.finishTransmit();
+//         Serial.print(F("[Lora] Sending another packet ... "));
+//         transmissionState = radio.startTransmit(str);
+//     }
+// }
 
-    if (radio.setFrequency(868.0) == RADIOLIB_ERR_INVALID_FREQUENCY)
-    {
-        Serial.println(F("Selected frequency is invalid for this module!"));
-        // while (true)
-            ;
-    }
+// static bool lora_sx1262_init(void)
+// {
+//     // initialize SX1262 with default settings
+//     Serial.print(F("[SX1262] Initializing ... "));
+//     int state = radio.begin();
+//     if (state == RADIOLIB_ERR_NONE)
+//     {
+//         Serial.println(F("success!"));
+//     }
+//     else
+//     {
+//         Serial.print(F("failed, code "));
+//         Serial.println(state);
+//         return false;
+//         // while (true)
+//             ;
+//     }
 
-    // set bandwidth to 250 kHz
-    if (radio.setBandwidth(250.0) == RADIOLIB_ERR_INVALID_BANDWIDTH)
-    {
-        Serial.println(F("Selected bandwidth is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     // set the function that will be called
+//     // when packet transmission is finished
+//     radio.setPacketSentAction(setFlag);
 
-    // set spreading factor to 10
-    if (radio.setSpreadingFactor(10) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
-    {
-        Serial.println(F("Selected spreading factor is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     if (radio.setFrequency(868.0) == RADIOLIB_ERR_INVALID_FREQUENCY)
+//     {
+//         Serial.println(F("Selected frequency is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // set coding rate to 6
-    if (radio.setCodingRate(6) == RADIOLIB_ERR_INVALID_CODING_RATE)
-    {
-        Serial.println(F("Selected coding rate is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     // set bandwidth to 250 kHz
+//     if (radio.setBandwidth(250.0) == RADIOLIB_ERR_INVALID_BANDWIDTH)
+//     {
+//         Serial.println(F("Selected bandwidth is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // set LoRa sync word to 0xAB
-    if (radio.setSyncWord(0xAB) != RADIOLIB_ERR_NONE)
-    {
-        Serial.println(F("Unable to set sync word!"));
-        // while (true)
-            ;
-    }
+//     // set spreading factor to 10
+//     if (radio.setSpreadingFactor(10) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
+//     {
+//         Serial.println(F("Selected spreading factor is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // set output power to 22 dBm (accepted range is -17 - 22 dBm)
-    if (radio.setOutputPower(22) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
-    {
-        Serial.println(F("Selected output power is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     // set coding rate to 6
+//     if (radio.setCodingRate(6) == RADIOLIB_ERR_INVALID_CODING_RATE)
+//     {
+//         Serial.println(F("Selected coding rate is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // set over current protection limit to 80 mA (accepted range is 45 - 240 mA)
-    // NOTE: set value to 0 to disable overcurrent protection
-    if (radio.setCurrentLimit(140) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
-    {
-        Serial.println(F("Selected current limit is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     // set LoRa sync word to 0xAB
+//     if (radio.setSyncWord(0xAB) != RADIOLIB_ERR_NONE)
+//     {
+//         Serial.println(F("Unable to set sync word!"));
+//         // while (true)
+//             ;
+//     }
 
-    // set LoRa preamble length to 15 symbols (accepted range is 0 - 65535)
-    if (radio.setPreambleLength(15) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH)
-    {
-        Serial.println(F("Selected preamble length is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     // set output power to 22 dBm (accepted range is -17 - 22 dBm)
+//     if (radio.setOutputPower(22) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
+//     {
+//         Serial.println(F("Selected output power is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // disable CRC
-    if (radio.setCRC(false) == RADIOLIB_ERR_INVALID_CRC_CONFIGURATION)
-    {
-        Serial.println(F("Selected CRC is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     // set over current protection limit to 80 mA (accepted range is 45 - 240 mA)
+//     // NOTE: set value to 0 to disable overcurrent protection
+//     if (radio.setCurrentLimit(140) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
+//     {
+//         Serial.println(F("Selected current limit is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // Some SX126x modules have TCXO (temperature compensated crystal
-    // oscillator). To configure TCXO reference voltage,
-    // the following method can be used.
-    if (radio.setTCXO(2.4) == RADIOLIB_ERR_INVALID_TCXO_VOLTAGE)
-    {
-        Serial.println(F("Selected TCXO voltage is invalid for this module!"));
-        // while (true)
-            ;
-    }
+//     // set LoRa preamble length to 15 symbols (accepted range is 0 - 65535)
+//     if (radio.setPreambleLength(15) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH)
+//     {
+//         Serial.println(F("Selected preamble length is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // Some SX126x modules use DIO2 as RF switch. To enable
-    // this feature, the following method can be used.
-    // NOTE: As long as DIO2 is configured to control RF switch,
-    //       it can't be used as interrupt pin!
-    if (radio.setDio2AsRfSwitch() != RADIOLIB_ERR_NONE)
-    {
-        Serial.println(F("Failed to set DIO2 as RF switch!"));
-        // while (true)
-            ;
-    }
+//     // disable CRC
+//     if (radio.setCRC(false) == RADIOLIB_ERR_INVALID_CRC_CONFIGURATION)
+//     {
+//         Serial.println(F("Selected CRC is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    Serial.println(F("All settings succesfully changed!"));
+//     // Some SX126x modules have TCXO (temperature compensated crystal
+//     // oscillator). To configure TCXO reference voltage,
+//     // the following method can be used.
+//     if (radio.setTCXO(2.4) == RADIOLIB_ERR_INVALID_TCXO_VOLTAGE)
+//     {
+//         Serial.println(F("Selected TCXO voltage is invalid for this module!"));
+//         // while (true)
+//             ;
+//     }
 
-    // start transmitting the first packet
-    Serial.print(F("[SX1262] Sending first packet ... "));
+//     // Some SX126x modules use DIO2 as RF switch. To enable
+//     // this feature, the following method can be used.
+//     // NOTE: As long as DIO2 is configured to control RF switch,
+//     //       it can't be used as interrupt pin!
+//     if (radio.setDio2AsRfSwitch() != RADIOLIB_ERR_NONE)
+//     {
+//         Serial.println(F("Failed to set DIO2 as RF switch!"));
+//         // while (true)
+//             ;
+//     }
 
-    // you can transmit C-string or Arduino string up to
-    // 256 characters long
-    transmissionState = radio.startTransmit("Hello World!");
+//     Serial.println(F("All settings succesfully changed!"));
 
-    return true;
-}
+//     // start transmitting the first packet
+//     Serial.print(F("[SX1262] Sending first packet ... "));
+
+//     // you can transmit C-string or Arduino string up to
+//     // 256 characters long
+//     transmissionState = radio.startTransmit("Hello World!");
+
+//     return true;
+// }
 
 static bool sd_card_init(void)
 {
-    if(!SD.begin(SD_CS)){
+    if(!SD.begin(BOARD_SD_CS)){
         Serial.println("Card Mount Failed");
         return false;
     }
@@ -703,60 +721,67 @@ static bool sd_card_init(void)
 
 static bool gps_init(void)
 {
-    int i = 10;
-    bool reply = false;
+    // int i = 10;
+    // bool reply = false;
 
-    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
+    // // SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
 
-    Serial.println("\nTesting GPS Modem Response...\n");
-    Serial.println("****");
-    while (i)
-    {
-        if (SerialGPS.available())
-        {
-            String r = SerialGPS.readString();
-            SerialMon.println(r);
-            if (r.length() >= 0)
-            {
-                reply = true;
-                break;
-            }
-        }
-        delay(500);
-        i--;
-    }
-    return false;
+    // Serial.println("\nTesting GPS Modem Response...\n");
+    // Serial.println("****");
+    // while (i)
+    // {
+    //     if (SerialGPS.available())
+    //     {
+    //         String r = SerialGPS.readString();
+    //         SerialMon.println(r);
+    //         if (r.length() >= 0)
+    //         {
+    //             reply = true;
+    //             break;
+    //         }
+    //     }
+    //     delay(500);
+    //     i--;
+    // }
+    return true;
 }
 
 void idf_setup() 
 {
     int backlight = 0;
 
-    gpio_hold_dis((gpio_num_t)TOUCH_RST);
-    gpio_hold_dis((gpio_num_t)LORA_RST);
+    gpio_hold_dis((gpio_num_t)BOARD_TOUCH_RST);
+    gpio_hold_dis((gpio_num_t)BOARD_LORA_RST);
     gpio_deep_sleep_hold_dis();
 
     // lora and sd use the same spi, in order to avoid mutual influence;
     // before powering on, all CS signals should be pulled high and in an unselected state;
-    pinMode(LORA_CS, OUTPUT);
-    digitalWrite(LORA_CS, HIGH);
-    pinMode(SD_CS, OUTPUT);
-    digitalWrite(SD_CS, HIGH);
+    pinMode(BOARD_LORA_CS, OUTPUT);
+    digitalWrite(BOARD_LORA_CS, HIGH);
+    pinMode(BOARD_SD_CS, OUTPUT);
+    digitalWrite(BOARD_SD_CS, HIGH);
+
+    // pinMode(BOARD_GPS_RXD, OUTPUT);
+    // pinMode(BOARD_GPS_TXD, OUTPUT);
 
     // Set the interrupt input to input pull-up
-    if (PCA9535_INT > 0) {
-        pinMode(PCA9535_INT, INPUT_PULLUP);
+    if (BOARD_PCA9535_INT > 0) {
+        pinMode(BOARD_PCA9535_INT, INPUT_PULLUP);
     }
 
     Serial.begin(115200);
+    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
     // // while (!Serial);
 
     SPI.begin(BOARD_SPI_SCLK, BOARD_SPI_MISO, BOARD_SPI_MOSI);
     Wire.begin(BOARD_SDA, BOARD_SCL);
 
-    pinMode(BL_EN, OUTPUT);
+    pinMode(BOARD_BL_EN, OUTPUT);
     ui_setting_get_backlight(&backlight);
     ui_setting_set_backlight(backlight);
+
+    screen_init();
+    // io_extend_lora_gps_power_on(true);
 
     peri_buf[E_PERI_INK_POWER]  = false; 
     peri_buf[E_PERI_BQ25896]    = bq25896_init();   // PMU --- 0x6B
@@ -767,12 +792,10 @@ void idf_setup()
     peri_buf[E_PERI_SD_CARD]    = sd_card_init();
     peri_buf[E_PERI_GPS]        = gps_init();
 
-    screen_init();
-
-    io_extend_lora_gps_power_on(true);
-
-    xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
+    // xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
     // xTaskCreate(lora_task, "lora_task", 1024 * 3, NULL, LORA_PRIORITY, &lora_handle);
+    // vTaskSuspend(gps_handle);
+    // vTaskSuspend(lora_handle);
 
     printf("LVGL Init\n");
     lv_port_disp_init();

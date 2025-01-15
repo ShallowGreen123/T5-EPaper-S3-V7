@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include "main.h"
 #include "utilities.h"
+#include "peripheral.h"
 #include "epdiy.h"
 
 #define T5_EPER_S3_SF_VER "v1.0 24.12.03"
@@ -109,14 +110,16 @@ void ui_clock_get_data(uint8_t *year, uint8_t *month, uint8_t *day, uint8_t *wee
 //************************************[ screen 2 ]****************************************** lora
 void ui_lora_set_mode(int mode)
 {
-    // lora_set_mode(mode);
+    lora_set_mode(mode);
 }
-
-void ui_lora_transmit(const char *str)
+int ui_lora_get_mode(void)
 {
-    // lora_transmit(str);
+    return lora_get_mode();
 }
-
+void ui_lora_send(const char *str)
+{
+    lora_transmit(str);
+}
 bool ui_lora_recv(String *str)
 {
     // return lora_receive(str);
@@ -150,10 +153,10 @@ void ui_setting_set_backlight(int bl)
 
     switch (bl)
     {
-        case 0: analogWrite(BL_EN, 0); break;
-        case 1: analogWrite(BL_EN, 50); break;
-        case 2: analogWrite(BL_EN, 100); break;
-        case 3: analogWrite(BL_EN, 230); break;
+        case 0: analogWrite(BOARD_BL_EN, 0); break;
+        case 1: analogWrite(BOARD_BL_EN, 50); break;
+        case 2: analogWrite(BOARD_BL_EN, 100); break;
+        case 3: analogWrite(BOARD_BL_EN, 230); break;
         default:
             break;
     }
@@ -402,21 +405,21 @@ void ui_shutdown(void)
 void ui_sleep(void)
 {
     touch.sleep();
-    radio.sleep();
+    lora_sleep();
 
-    digitalWrite(TOUCH_RST, LOW); 
-    digitalWrite(LORA_RST, LOW); 
+    digitalWrite(BOARD_TOUCH_RST, LOW); 
+    digitalWrite(BOARD_LORA_RST, LOW); 
     
-    gpio_hold_en((gpio_num_t)TOUCH_RST);
-    gpio_hold_en((gpio_num_t)LORA_RST);
+    gpio_hold_en((gpio_num_t)BOARD_TOUCH_RST);
+    gpio_hold_en((gpio_num_t)BOARD_LORA_RST);
     gpio_deep_sleep_hold_en();
 
     io_extend_lora_gps_power_on(false);
-    analogWrite(BL_EN, 0);
+    analogWrite(BOARD_BL_EN, 0);
 
     epd_poweroff();
 
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)BOOT_BTN, 0);
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)BOARD_BOOT_BTN, 0);
     // esp_sleep_enable_ext1_wakeup((1UL << KEY_BTN), ESP_EXT1_WAKEUP_ANY_LOW); 
     esp_deep_sleep_start();
 }

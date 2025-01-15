@@ -13,32 +13,29 @@
 #define BOARD_SPI_MOSI    (13)
 #define BOARD_SPI_SCLK    (14)
 
-#define TOUCH_SCL  (BOARD_SCL)
-#define TOUCH_SDA  (BOARD_SDA)
-#define TOUCH_INT  (3)
-#define TOUCH_RST  (9)
+#define BOARD_TOUCH_SCL  (BOARD_SCL)
+#define BOARD_TOUCH_SDA  (BOARD_SDA)
+#define BOARD_TOUCH_INT  (3)
+#define BOARD_TOUCH_RST  (9)
 
-#define RTC_SCL (BOARD_SCL)
-#define RTC_SDA (BOARD_SDA)
-#define RTC_IRQ (2)
+#define BOARD_RTC_SCL (BOARD_SCL)
+#define BOARD_RTC_SDA (BOARD_SDA)
+#define BOARD_RTC_IRQ (2)
 
-#define SD_MISO    (BOARD_SPI_MISO)
-#define SD_MOSI    (BOARD_SPI_MOSI)
-#define SD_SCLK    (BOARD_SPI_SCLK)
-#define SD_CS      (12)
+#define BOARD_SD_MISO    (BOARD_SPI_MISO)
+#define BOARD_SD_MOSI    (BOARD_SPI_MOSI)
+#define BOARD_SD_SCLK    (BOARD_SPI_SCLK)
+#define BOARD_SD_CS      (12)
 
-#define LORA_MISO (BOARD_SPI_MISO)
-#define LORA_MOSI (BOARD_SPI_MOSI)
-#define LORA_SCLK (BOARD_SPI_SCLK)
-#define LORA_CS   (46)
-#define LORA_IRQ  (10)
-#define LORA_RST  (1)
-#define LORA_BUSY (47)
+#define BOARD_LORA_MISO (BOARD_SPI_MISO)
+#define BOARD_LORA_MOSI (BOARD_SPI_MOSI)
+#define BOARD_LORA_SCLK (BOARD_SPI_SCLK)
+#define BOARD_LORA_CS   (46)
+#define BOARD_LORA_IRQ  (10)
+#define BOARD_LORA_RST  (1)
+#define BOARD_LORA_BUSY (47)
 
-#define BL_EN (11)
-
-#define PCA9535_INT (38)
-
-#define BOOT_BTN (0)
-
+#define BOARD_BL_EN (11)
+#define BOARD_PCA9535_INT (38)
+#define BOARD_BOOT_BTN (0)
 
