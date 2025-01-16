@@ -862,7 +862,7 @@ static void scr2_item_create(const char *name, lv_event_cb_t cb)
     lv_obj_set_style_bg_color(obj, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
     lv_obj_set_style_text_color(obj, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
     lv_obj_set_style_border_width(obj, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(obj, 6, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(obj, 3, LV_PART_MAIN | LV_STATE_PRESSED);
     lv_obj_set_style_outline_width(obj, 0, LV_PART_MAIN | LV_STATE_PRESSED);
     lv_obj_set_style_radius(obj, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -984,7 +984,6 @@ static void lora_auto_send_event(lv_event_t * e)
     scr2_1_cnt = 0;
 }
 
-
 static void lora_timer_event(lv_timer_t *t)
 {
     static int data = 0;
@@ -992,7 +991,7 @@ static void lora_timer_event(lv_timer_t *t)
     const char *recv_info = NULL;
     int recv_rssi = 0;
 
-    if((ui_lora_get_mode() == LORA_MODE_SEND) || (ui_lora_get_mode() == LORA_MODE_RECV)) 
+    if(ui_lora_get_mode() == LORA_MODE_SEND) 
     {
         scr2_1_cnt++;
         if(scr2_1_cnt >= ARRAY_LEN(scr2_lab_buf)) {
@@ -1001,10 +1000,7 @@ static void lora_timer_event(lv_timer_t *t)
             }
             scr2_1_cnt = 0;
         }
-    }
-    
-    if(ui_lora_get_mode() == LORA_MODE_SEND) 
-    {
+
         lv_snprintf(buf, 32, "# %d T5-EPaper-S3", data++);
         lv_label_set_text_fmt(scr2_lab_buf[scr2_1_cnt], "send-> %s", buf);
         ui_lora_send(buf);
@@ -1013,6 +1009,13 @@ static void lora_timer_event(lv_timer_t *t)
     {
         if(ui_lora_recv(&recv_info, &recv_rssi))
         {
+            scr2_1_cnt++;
+            if(scr2_1_cnt >= ARRAY_LEN(scr2_lab_buf)) {
+                for(int i = 0; i < ARRAY_LEN(scr2_lab_buf); i++){
+                    lv_label_set_text_fmt(scr2_lab_buf[i], " ", i);
+                }
+                scr2_1_cnt = 0;
+            }
             ui_lora_clean_recv_flag();
             lv_label_set_text_fmt(scr2_lab_buf[scr2_1_cnt], "recv-> %s [%d]", recv_info, recv_rssi);
         }
@@ -2173,8 +2176,9 @@ static scr_lifecycle_t screen7 = {
 #endif
 //************************************[ screen 8 ]****************************************** gps
 #if 1
-#define line_max 21
+#define line_max 32
 static lv_obj_t *scr3_cont;
+static lv_obj_t *scr3_cnt_lab;
 static lv_obj_t *scr8_lab_buf[10];
 static lv_timer_t *GPS_loop_timer = NULL;
 
@@ -2198,12 +2202,12 @@ static lv_obj_t * scr3_create_label(lv_obj_t *parent)
 
 static void scr3_GPS_updata(void)
 {
-    float lat      = 0; // Latitude
-    float lon      = 0; // Longitude
-    float speed    = 0; // Speed over ground
+    double lat      = 0; // Latitude
+    double lon      = 0; // Longitude
+    double speed    = 0; // Speed over ground
     float alt      = 0; // Altitude
     float accuracy = 0; // Accuracy
-    int   vsat     = 0; // Visible Satellites
+    uint32_t   vsat     = 0; // Visible Satellites
     int   usat     = 0; // Used Satellites
     uint16_t   year     = 0; // 
     uint8_t   month    = 0; // 
@@ -2212,39 +2216,46 @@ static void scr3_GPS_updata(void)
     uint8_t   min      = 0; // 
     uint8_t   sec      = 0; // 
 
-    char buf[16];
+    static int cnt = 0;
 
-    ui_gps_get_info(&lat, &lon, &speed, &alt, &accuracy, &vsat, &usat, &year, &month, &day, &hour, &min, &sec);
+    lv_label_set_text_fmt(scr3_cnt_lab, " %05d ", ++cnt);
 
-    lv_snprintf(buf, 16, "%0.3f", lat);
-    scr_label_line_algin(scr8_lab_buf[0], line_max, "lat:", buf);
+    ui_gps_get_coord(&lat, &lon);
+    ui_gps_get_data(&year, &month, &day);
+    ui_gps_get_time(&hour, &min, &sec);
+    ui_gps_get_satellites(&vsat);
+    ui_gps_get_speed(&speed);
 
-    lv_snprintf(buf, 16, "%0.3f", lon);
-    scr_label_line_algin(scr8_lab_buf[1], line_max, "lon:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%0.3f", lat);
+    scr_label_line_algin(scr8_lab_buf[0], line_max, "latitude:", global_buf);
 
-    lv_snprintf(buf, 16, "%0.1f", speed);
-    scr_label_line_algin(scr8_lab_buf[2], line_max, "speed:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%0.3f", lon);
+    scr_label_line_algin(scr8_lab_buf[1], line_max, "longitude:", global_buf);
 
-    lv_snprintf(buf, 16, "%0.1f", alt);
-    scr_label_line_algin(scr8_lab_buf[3], line_max, "alt:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%d", year);
+    scr_label_line_algin(scr8_lab_buf[2], line_max, "year:", global_buf);
 
-    lv_snprintf(buf, 16, "%d", vsat);
-    scr_label_line_algin(scr8_lab_buf[4], line_max, "vsat:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%d", month);
+    scr_label_line_algin(scr8_lab_buf[3], line_max, "month:", global_buf);
 
-    lv_snprintf(buf, 16, "%d", usat);
-    scr_label_line_algin(scr8_lab_buf[5], line_max, "usat:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%d", day);
+    scr_label_line_algin(scr8_lab_buf[4], line_max, "day:", global_buf);
 
-    lv_snprintf(buf, 16, "%d", year);
-    scr_label_line_algin(scr8_lab_buf[6], line_max, "year:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%02d:%02d:%02d", hour, min, sec);
+    scr_label_line_algin(scr8_lab_buf[5], line_max, "time:", global_buf);
 
-    lv_snprintf(buf, 16, "%d", month);
-    scr_label_line_algin(scr8_lab_buf[7], line_max, "month:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%0.2f kmph", speed);
+    scr_label_line_algin(scr8_lab_buf[6], line_max, "satellites:", global_buf);
 
-    lv_snprintf(buf, 16, "%d", day);
-    scr_label_line_algin(scr8_lab_buf[8], line_max, "day:", buf);
+    lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%d", vsat);
+    scr_label_line_algin(scr8_lab_buf[7], line_max, "vsat:", global_buf);
 
-    lv_snprintf(buf, 16, "%02d:%02d:%02d", hour, min, sec);
-    scr_label_line_algin(scr8_lab_buf[9], line_max, "time:", buf);
+    // lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%0.1f", alt);
+    // scr_label_line_algin(scr8_lab_buf[8], line_max, "alt:", global_buf);
+
+    // lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%d", usat);
+    // scr_label_line_algin(scr8_lab_buf[9], line_max, "usat:", global_buf);
+
 }
 
 static void GPS_loop_timer_event(lv_timer_t * t)
@@ -2278,19 +2289,32 @@ static void create10(lv_obj_t *parent)
 
     for(int i = 0; i < sizeof(scr8_lab_buf) / sizeof(scr8_lab_buf[0]); i++) {
         scr8_lab_buf[i] = scr3_create_label(scr3_cont);
+        lv_label_set_text(scr8_lab_buf[i], " ");
     }
+
+    scr3_cnt_lab = lv_label_create(parent);
+    lv_obj_set_style_text_font(scr3_cnt_lab, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_obj_set_style_radius(scr3_cnt_lab, 5, LV_PART_MAIN);
+    lv_obj_set_style_border_width(scr3_cnt_lab, 2, LV_PART_MAIN);
+    lv_obj_set_style_text_align(scr3_cnt_lab, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_text_fmt(scr3_cnt_lab, " %05d ", 0);
+    lv_obj_center(scr3_cnt_lab);
+    lv_obj_align(scr3_cnt_lab, LV_ALIGN_TOP_RIGHT, -20, 20);
+
     // back 
     scr_back_btn_create(parent, "GPS", scr10_btn_event_cb);
 }
 
 static void entry10(void) {
     scr3_GPS_updata();
-
-    GPS_loop_timer = lv_timer_create(GPS_loop_timer_event, 5000, NULL);
+    ui_gps_task_resume();
+    GPS_loop_timer = lv_timer_create(GPS_loop_timer_event, 3000, NULL);
  
 }
 static void exit10(void) 
 {
+    ui_gps_task_suspend();
+
     if(GPS_loop_timer) {
         lv_timer_del(GPS_loop_timer);
         GPS_loop_timer = NULL;

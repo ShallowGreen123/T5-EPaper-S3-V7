@@ -30,10 +30,8 @@
 #include <driver/i2c.h>
 #include "scr_mrg.h"
 
-TaskHandle_t gps_handle;
-TaskHandle_t btn_handle;
 
-TinyGPSPlus gps;
+TaskHandle_t btn_handle;
 
 // peripheral
 bool peri_buf[E_PERI_MAX] = {0};
@@ -68,106 +66,6 @@ bool disp_refr_is_busy = false;
 /*********************************************************************************
  *                                   TASK
  * *******************************************************************************/
-const char *gpsStream =
-  "$GPRMC,045103.000,A,3014.1984,N,09749.2872,W,0.67,161.46,030913,,,A*7C\r\n"
-  "$GPGGA,045104.000,3014.1985,N,09749.2873,W,1,09,1.2,211.6,M,-22.5,M,,0000*62\r\n"
-  "$GPRMC,045200.000,A,3014.3820,N,09748.9514,W,36.88,65.02,030913,,,A*77\r\n"
-  "$GPGGA,045201.000,3014.3864,N,09748.9411,W,1,10,1.2,200.8,M,-22.5,M,,0000*6C\r\n"
-  "$GPRMC,045251.000,A,3014.4275,N,09749.0626,W,0.51,217.94,030913,,,A*7D\r\n"
-  "$GPGGA,045252.000,3014.4273,N,09749.0628,W,1,09,1.3,206.9,M,-22.5,M,,0000*6F\r\n";
-
-double gps_lat=0, gps_lng=0;
-uint16_t gps_year=0;
-uint8_t gps_month=0, gps_day=0;
-uint8_t gps_hour=0, gps_minute=0, gps_second=0;
-
-void displayInfo()
-{
-  Serial.print(F("Location: ")); 
-  if (gps.location.isValid())
-  {
-    gps_lat = gps.location.lat();
-    gps_lng = gps.location.lng();
-    Serial.print(gps_lat, 6);
-    Serial.print(F(","));
-    Serial.print(gps_lng, 6);
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
-
-  Serial.print(F("  Date/Time: "));
-  if (gps.date.isValid())
-  {
-    gps_year = gps.date.year();
-    gps_month = gps.date.month();
-    gps_day = gps.date.day();
-    Serial.print(gps_month);
-    Serial.print(F("/"));
-    Serial.print(gps_day);
-    Serial.print(F("/"));
-    Serial.print(gps_year);
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
-
-  Serial.print(F(" "));
-  if (gps.time.isValid())
-  {
-    gps_hour = gps.time.hour();
-    gps_minute = gps.time.minute();
-    gps_second = gps.time.second();
-
-    if (gps_hour < 10) Serial.print(F("0"));
-    Serial.print(gps_hour);
-    Serial.print(F(":"));
-    if (gps_minute < 10) Serial.print(F("0"));
-    Serial.print(gps_minute);
-    Serial.print(F(":"));
-    if (gps_second < 10) Serial.print(F("0"));
-    Serial.print(gps_second);
-    Serial.print(F("."));
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
-
-  Serial.println();
-}
-
-void gps_task(void *param)
-{
-    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
-
-    while (1)
-    {
-        // while (SerialGPS.available())
-        // {
-        //     SerialMon.write(SerialGPS.read());
-        // }
-        // while (SerialMon.available())
-        // {
-        //     SerialGPS.write(SerialMon.read());
-        // }
-        // const char * gpsStr = gpsStream;
-        //     while (*gpsStr)
-        //     if (gps.encode(*gpsStr++))
-        //         displayInfo();
-
-        while (SerialGPS.available() > 0)
-            if (gps.encode(SerialGPS.read()))
-                displayInfo();
-        delay(3000);
-
-        
-        // delay(10);
-    }
-}
-
 void btn_task(void *param)
 {
     while(1)
@@ -177,9 +75,10 @@ void btn_task(void *param)
             if(button_read()) {
                 Serial.printf("Button Press\n");
                 disp_refresh_screen();
-            }else{
-                Serial.printf("Button Release\n");
             }
+            // else{
+            //     Serial.printf("Button Release\n");
+            // }
         }
         delay(100);
     }
@@ -592,33 +491,6 @@ static bool sd_card_init(void)
     return true;
 }
 
-static bool gps_init(void)
-{
-    // int i = 10;
-    // bool reply = false;
-
-    // // SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
-
-    // Serial.println("\nTesting GPS Modem Response...\n");
-    // Serial.println("****");
-    // while (i)
-    // {
-    //     if (SerialGPS.available())
-    //     {
-    //         String r = SerialGPS.readString();
-    //         SerialMon.println(r);
-    //         if (r.length() >= 0)
-    //         {
-    //             reply = true;
-    //             break;
-    //         }
-    //     }
-    //     delay(500);
-    //     i--;
-    // }
-    return true;
-}
-
 void idf_setup() 
 {
     int backlight = 0;
@@ -667,10 +539,8 @@ void idf_setup()
     peri_buf[E_PERI_SD_CARD]    = sd_card_init();
     peri_buf[E_PERI_GPS]        = gps_init();
 
-    xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
     xTaskCreate(btn_task, "lora_task", 1024 * 3, NULL, INFARED_PRIORITY, &btn_handle);
-    vTaskSuspend(gps_handle);
-
+    
     printf("LVGL Init\n");
     lv_port_disp_init();
 

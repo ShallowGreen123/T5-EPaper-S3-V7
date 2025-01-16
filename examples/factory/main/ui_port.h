@@ -89,11 +89,13 @@ uint16_t ui_battery_27220_get_health(void);
 const char * ui_battert_27220_get_percent_level(void);
 
 // gsp
-
-void ui_gps_get_info(float *lat, float *lon, float *speed, float *alt, float *accuracy,
-             int *vsat, int *usat, uint16_t *year, uint8_t *month, uint8_t *day,
-             uint8_t *hour,  uint8_t *min, uint8_t *sec);
-
+void ui_gps_task_suspend(void);
+void ui_gps_task_resume(void);
+void ui_gps_get_coord(double *lat, double *lng);
+void ui_gps_get_data(uint16_t *year, uint8_t *month, uint8_t *day);
+void ui_gps_get_time(uint8_t *hour, uint8_t *minute, uint8_t *second);
+void ui_gps_get_satellites(uint32_t *vsat);
+void ui_gps_get_speed(double *speed);
 // shutdown
 void ui_shutdown(void);
 
