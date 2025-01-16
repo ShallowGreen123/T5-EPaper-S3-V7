@@ -1,5 +1,8 @@
 #pragma once
 
+#define UI_T5_EPARPER_S3_PRO_VERSION    "v1.0-250115"  // Software version
+#define BOARD_T5_EPARPER_S3_PRO_VERSION "v1.0-241224"  // Hardware version
+
 #define BOARD_GPS_RXD 44
 #define BOARD_GPS_TXD 43
 #define SerialMon Serial

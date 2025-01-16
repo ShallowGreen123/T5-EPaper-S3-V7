@@ -9,7 +9,7 @@
 
 #define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
 
-#define GLOBAL_BUF_LEN 16
+#define GLOBAL_BUF_LEN 48
 char global_buf[GLOBAL_BUF_LEN];
 
 static lv_timer_t *touch_chk_timer = NULL;
@@ -64,6 +64,30 @@ void scr_middle_line(lv_obj_t *parent)
     lv_obj_add_style(line1, &style_line, 0);
     lv_obj_set_align(line1, LV_ALIGN_LEFT_MID);
 }
+
+static const char *line_full_format(int max_c, const char *str1, const char *str2)
+{
+    int len1 = 0, len2 = 0;
+    int j;
+
+    len1 = strlen(str1);
+
+    strncpy(global_buf, str1, len1);
+
+    len2 = strlen(str2);
+    for(j = len1; j < max_c -1 - len2; j++){
+        global_buf[j] = ' ';
+    }
+    strncpy(global_buf + j, str2, len2);
+    j = j + len2;
+    
+    global_buf[j] = '\0'; 
+
+    printf("[%d] buf: %s\n", __LINE__, global_buf);
+
+    return (const char *)global_buf;
+}
+
 
 /* clang-format on */
 #define SETTING_PAGE_MAX_ITEM 7
@@ -937,6 +961,17 @@ static void lora_timer_event(lv_timer_t *t)
     char buf[32];
     const char *recv_info = NULL;
     int recv_rssi = 0;
+
+    if((ui_lora_get_mode() == LORA_MODE_SEND) || (ui_lora_get_mode() == LORA_MODE_RECV)) 
+    {
+        scr2_1_cnt++;
+        if(scr2_1_cnt >= ARRAY_LEN(scr2_lab_buf)) {
+            for(int i = 0; i < ARRAY_LEN(scr2_lab_buf); i++){
+                lv_label_set_text_fmt(scr2_lab_buf[i], " ", i);
+            }
+            scr2_1_cnt = 0;
+        }
+    }
     
     if(ui_lora_get_mode() == LORA_MODE_SEND) 
     {
@@ -950,14 +985,6 @@ static void lora_timer_event(lv_timer_t *t)
         {
             ui_lora_clean_recv_flag();
             lv_label_set_text_fmt(scr2_lab_buf[scr2_1_cnt], "recv-> %s [%d]", recv_info, recv_rssi);
-        }
-    }
-
-    if((ui_lora_get_mode() == LORA_MODE_SEND) || (ui_lora_get_mode() == LORA_MODE_RECV)) 
-    {
-        scr2_1_cnt++;
-        if(scr2_1_cnt >= ARRAY_LEN(scr2_lab_buf)) {
-            scr2_1_cnt = 0;
         }
     }
 }
@@ -1211,29 +1238,21 @@ static void create4_1(lv_obj_t *parent)
     lv_obj_t *info = lv_label_create(parent);
     lv_obj_set_width(info, LV_HOR_RES * 0.9);
     lv_obj_set_style_text_color(info, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
-    lv_obj_set_style_text_font(info, &Font_Mono_Bold_30, LV_PART_MAIN);
+    lv_obj_set_style_text_font(info, &Font_Mono_Bold_25, LV_PART_MAIN);
     lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_long_mode(info, LV_LABEL_LONG_WRAP);
-    lv_label_set_text_fmt(info, "                           \n"
-                                "Version:        %s\n"
-                                "                           \n"
-                                "Version:               v1.0\n"
-                                "                           \n"
-                                "Version:               v1.0\n"
-                                "                           \n"
-                                "Version:               v1.0\n"
-                                "                           \n"
-                                "Version:               v1.0\n"
-                                "                           \n"
-                                "Version:               v1.0\n"
-                                "                           \n"
-                                "Version:               v1.0\n"
-                                "                           \n"
-                                "Version:               v3.0\n"
-                                "                           \n"
-                                ,
-                                "v1.0-241205"
-                                );
+
+    String str = "";
+
+    str += "\n                           \n";
+    str += line_full_format(32, "SF Version:", ui_setting_get_sf_ver());
+    str += "\n                           \n";
+
+    str += line_full_format(32, "HD Version:", ui_setting_get_hd_ver());
+    str += "\n                           \n";
+
+
+    lv_label_set_text_fmt(info, str.c_str());
     // String str = "";
 
     // str += "                           \n";

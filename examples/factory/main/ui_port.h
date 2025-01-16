@@ -42,7 +42,6 @@ void ui_lora_set_mode(int mode);
 int ui_lora_get_mode(void);
 void ui_lora_send(const char *str);
 bool ui_lora_recv(const char **str, int *rssi);
-void ui_lora_recv_loop(void);
 void ui_lora_clean_recv_flag(void);
 
 // sd
@@ -55,6 +54,9 @@ void ui_setting_set_backlight(int bl);
 const char *ui_setting_get_backlight(int *ret_bl);
 void ui_setting_set_refresh_speed(int bl);
 const char *ui_setting_get_refresh_speed(int *ret_bl);
+// setting -> about system
+const char *ui_setting_get_sf_ver(void);
+const char *ui_setting_get_hd_ver(void);
 
 // test
 const char *ui_test_get_gps(int *ret_n);

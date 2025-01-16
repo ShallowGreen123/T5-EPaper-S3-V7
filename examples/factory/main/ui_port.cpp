@@ -5,8 +5,6 @@
 #include "peripheral.h"
 #include "epdiy.h"
 
-#define T5_EPER_S3_SF_VER "v1.0 24.12.03"
-
 int ui_setting_backlight = 3;  // 0 - 3
 int epd_vcom_default = 1560;
 
@@ -134,10 +132,6 @@ bool ui_lora_recv(const char **str, int *rssi)
 {
     return lora_get_recv(str, rssi);
 }
-void ui_lora_recv_loop(void)
-{
-    // lora_receive_loop();
-}
 void ui_lora_clean_recv_flag(void)
 {
     lora_set_recv_flag();
@@ -226,6 +220,16 @@ const char *ui_setting_get_refresh_speed(int *ret_bl)
 
     return ret;
 }
+
+const char *ui_setting_get_sf_ver(void)
+{
+    return UI_T5_EPARPER_S3_PRO_VERSION;
+}
+const char *ui_setting_get_hd_ver(void)
+{
+    return BOARD_T5_EPARPER_S3_PRO_VERSION;
+}
+
 #endif
 //************************************[ screen 5 ]****************************************** test
 const char *ui_test_get_gps(int *ret_n)
@@ -412,8 +416,27 @@ const char * ui_battert_27220_get_percent_level(void)
     return str;
 }
 #endif
-//************************************[ screen 8 ]****************************************** shutdown
+//************************************[ screen 8 ]****************************************** gps
+void ui_GPS_get_info(float *lat, float *lon, float *speed, float *alt, float *accuracy,
+             int *vsat,  int *usat,  int *year,    int *month, int *day,
+             int *hour,  int *min,   int *sec)
+{
+    *lat      = gps.satellites.isValid() ? gps.location.lat() : 0;
+    *lon      = gps.location.isValid() ? gps.location.lng() : 0;
+    *speed    = gps.speed.isValid() ? gps.speed.kmph() : 0;
+    *alt      = gps.altitude.isValid() ? gps.altitude.meters() : 0;
+    *accuracy = gps.course.isValid() ? gps.course.deg() : 0;
+    *vsat     = gps.altitude.isValid() ? gps.satellites.value() : 0;
+    *usat     = gps.altitude.isValid() ? gps.satellites.value() : 0;
+    *year     = gps.date.isValid() ? gps.date.year() : 0;
+    *month    = gps.date.isValid() ? gps.date.month() : 0;
+    *day      = gps.date.isValid() ? gps.date.day() : 0;
+    *hour     = gps.time.isValid() ? gps.time.hour() : 0;
+    *min      = gps.time.isValid() ? gps.time.minute() : 0;
+    *sec      = gps.time.isValid() ? gps.time.second() : 0;
+}
 
+//************************************[ screen 8 ]****************************************** shutdown
 void ui_shutdown(void)
 {
     PPM.shutdown();
@@ -441,4 +464,3 @@ void ui_sleep(void)
     esp_deep_sleep_start();
 }
 
-//************************************[ home btn ]******************************************
