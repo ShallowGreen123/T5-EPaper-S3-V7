@@ -4,6 +4,7 @@
 #include "scr_mrg.h"
 #include "ui.h"
 #include "ui_port.h"
+#include "src/assets.h"
 
 /* clang-format off */
 
@@ -12,7 +13,6 @@
 #define GLOBAL_BUF_LEN 48
 char global_buf[GLOBAL_BUF_LEN];
 
-static lv_timer_t *touch_chk_timer = NULL;
 static lv_timer_t *taskbar_update_timer = NULL;
 uint16_t taskbar_statue[TASKBAR_ID_MAX] = {0};
 //************************************[ Other fun ]******************************************
@@ -193,8 +193,8 @@ static const char *line_full_format(int max_c, const char *str1, const char *str
 void ui_list_btn_create(lv_obj_t *parent, lv_event_cb_t event_cb)
 {
     lv_obj_t * ui_Button2 = lv_btn_create(parent);
-    lv_obj_set_width(ui_Button2, 90);
-    lv_obj_set_height(ui_Button2, 45);
+    lv_obj_set_width(ui_Button2, 140);
+    lv_obj_set_height(ui_Button2, 85);
     lv_obj_align(ui_Button2, LV_ALIGN_BOTTOM_MID, -140, -30);
     // lv_obj_set_align(ui_Button2, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_Button2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
@@ -218,8 +218,8 @@ void ui_list_btn_create(lv_obj_t *parent, lv_event_cb_t event_cb)
     lv_obj_set_style_text_opa(ui_Label1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_t * ui_Button14 = lv_btn_create(parent);
-    lv_obj_set_width(ui_Button2, 90);
-    lv_obj_set_height(ui_Button2, 45);
+    lv_obj_set_width(ui_Button14, 140);
+    lv_obj_set_height(ui_Button14, 85);
     lv_obj_align(ui_Button14, LV_ALIGN_BOTTOM_MID, 140, -30);
     // lv_obj_set_align(ui_Button14, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_Button14, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
@@ -266,7 +266,6 @@ const struct menu_icon icon_buf2[] = {
     {&img_sleep,    "sleep" ,   210, 45 },
 };
 
-static ui_indev_read_cb menu_gesture_dir_cb = NULL;
 static lv_obj_t *ui_Panel4;
 static lv_obj_t *menu_screen1;
 static lv_obj_t *menu_screen2;
@@ -319,9 +318,25 @@ static void menu_get_gesture_dir(int dir)
     }
 }
 
+static void menu_gesture_event(lv_event_t *e)
+{
+    lv_indev_t * touch_indev = lv_indev_get_next(NULL);
+    lv_dir_t dir = lv_indev_get_gesture_dir(touch_indev);
+
+    // printf("code=%d gesture = %d\n", e->code, dir);
+
+    if(dir == LV_DIR_RIGHT) { // right
+        menu_get_gesture_dir(LV_DIR_RIGHT);
+    } 
+    else if(dir == LV_DIR_LEFT) { // left
+        menu_get_gesture_dir(LV_DIR_LEFT);
+    }
+}
+
 static void menu_btn_event(lv_event_t *e)
 {
     int data = (int)e->user_data;
+    printf("code=%d\n", lv_event_get_code(e));
     if(e->code == LV_EVENT_CLICKED) {
 
         // // ui_full_refresh();
@@ -402,6 +417,13 @@ static void create0(lv_obj_t *parent)
     lv_label_set_text_fmt(menu_taskbar_sd, "%s", LV_SYMBOL_SD_CARD);
     lv_obj_add_flag(menu_taskbar_sd, LV_OBJ_FLAG_HIDDEN);
 
+    int sd_st = 0;
+    ui_test_get_sd(&sd_st);
+    if(sd_st == 1)
+    {
+        lv_obj_clear_flag(menu_taskbar_sd, LV_OBJ_FLAG_HIDDEN);
+    }
+
     menu_taskbar_charge = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
     lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
@@ -444,6 +466,12 @@ static void create0(lv_obj_t *parent)
         lv_obj_set_y(img, icon_buf[i].offs_y);
         lv_img_set_src(img, icon_buf[i].icon_src);
         lv_obj_add_event_cb(img, menu_btn_event, LV_EVENT_CLICKED, (void *)i);
+
+        // lv_obj_t *btn = lv_btn_create(menu_screen1);
+        // lv_obj_set_size(btn, 120, 120);
+        // lv_obj_set_x(btn, icon_buf[i].offs_x);
+        // lv_obj_set_y(btn, icon_buf[i].offs_y);
+        // lv_obj_add_event_cb(btn, menu_btn_event, LV_EVENT_CLICKED, (void *)i);
     }
 
     for(int i = 0; i < icon_buf2_len; i++) {
@@ -453,6 +481,12 @@ static void create0(lv_obj_t *parent)
         lv_obj_set_y(img, icon_buf2[i].offs_y);
         lv_img_set_src(img, icon_buf2[i].icon_src);
         lv_obj_add_event_cb(img, menu_btn_event, LV_EVENT_CLICKED, (void *)(icon_buf_len + i));
+
+        // lv_obj_t *btn = lv_btn_create(menu_screen2);
+        // lv_obj_set_size(btn, 120, 120);
+        // lv_obj_set_x(btn, icon_buf[i].offs_x);
+        // lv_obj_set_y(btn, icon_buf[i].offs_y);
+        // lv_obj_add_event_cb(btn, menu_btn_event, LV_EVENT_CLICKED, (void *)(icon_buf_len + i));
     }
 
     ui_Panel4 = lv_obj_create(parent);
@@ -502,9 +536,9 @@ static void create0(lv_obj_t *parent)
     }
 }
 static void entry0(void) {
-    menu_gesture_dir_cb = menu_get_gesture_dir;
-    lv_timer_resume(touch_chk_timer);
     lv_timer_resume(taskbar_update_timer);
+
+    lv_obj_add_event_cb(scr_mgr_get_top_obj(), menu_gesture_event, LV_EVENT_GESTURE, NULL);
 
     uint8_t h, m, s;
     ui_clock_get_time(&h, &m, &s);
@@ -515,15 +549,10 @@ static void entry0(void) {
     lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", ui_battery_27220_get_percent());
 }
 static void exit0(void) {
-    menu_gesture_dir_cb = NULL;
-    lv_timer_pause(touch_chk_timer);
     lv_timer_pause(taskbar_update_timer);
 }
-static void destroy0(void) {
-    if(menu_taskbar) {
-        lv_obj_del(menu_taskbar);
-        menu_taskbar = NULL;
-    }
+static void destroy0(void) 
+{
 }
 
 static scr_lifecycle_t screen0 = {
@@ -654,6 +683,7 @@ static scr_lifecycle_t screen1 = {
 };
 #endif
 //************************************[ screen 2 ]****************************************** lora
+// --------------------- screen --------------------- lora
 #if 1
 // #define LORA_RECV_INFO_MAX_LINE 12
 
@@ -832,7 +862,7 @@ static void scr2_item_create(const char *name, lv_event_cb_t cb)
     lv_obj_set_style_bg_color(obj, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
     lv_obj_set_style_text_color(obj, lv_color_hex(EPD_COLOR_FG), LV_PART_MAIN);
     lv_obj_set_style_border_width(obj, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(obj, 3, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(obj, 6, LV_PART_MAIN | LV_STATE_PRESSED);
     lv_obj_set_style_outline_width(obj, 0, LV_PART_MAIN | LV_STATE_PRESSED);
     lv_obj_set_style_radius(obj, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -1039,6 +1069,7 @@ static void create2_1(lv_obj_t *parent)
 }
 static void entry2_1(void) 
 {
+    scr2_1_cnt = 0;
     scr2_1_timer = lv_timer_create(lora_timer_event, 3000, NULL);
 }
 static void exit2_1(void) 
@@ -1251,24 +1282,7 @@ static void create4_1(lv_obj_t *parent)
     str += line_full_format(32, "HD Version:", ui_setting_get_hd_ver());
     str += "\n                           \n";
 
-
     lv_label_set_text_fmt(info, str.c_str());
-    // String str = "";
-
-    // str += "                           \n";
-    // str += line_full_format(28, "Version:", ui_setting_get_sf_ver());
-    // str += "\n                           \n";
-    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
-    // str += "\n                           \n";
-    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
-    // str += "\n                           \n";
-    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
-    // str += "\n                           \n";
-    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
-    // str += "\n                           \n";
-    // str += line_full_format(28, "SD Cap:", ui_setting_get_sd_capacity());
-
-    // lv_label_set_text_fmt(info, "%s", str.c_str());
     
     lv_obj_align(info, LV_ALIGN_TOP_MID, 0, 50);
     
@@ -1290,7 +1304,6 @@ static scr_lifecycle_t screen4_1 = {
 #endif
 // --------------------- screen 4.2 --------------------- Set EPD Vcom
 #if 1
-
 static lv_obj_t *set_1000mv_item;
 static lv_obj_t *set_100mv_item;
 static lv_obj_t *set_10mv_item;
@@ -1324,7 +1337,7 @@ static void scr4_2_btn_event_cb(lv_event_t * e)
     }                                          \
     num = num > max ? max : num;               \
     num = num < min ? min : num;               \
-    lv_label_set_text_fmt(num_lab, " %d ", num);
+    lv_label_set_text_fmt(num_lab, "%d", num);
 /* clang-format off */
 static void scr4_2_sub_item_event(lv_event_t *e)
 {
@@ -2158,7 +2171,143 @@ static scr_lifecycle_t screen7 = {
 };
 #undef line_max
 #endif
-//************************************[ screen 8 ]****************************************** shutdown
+//************************************[ screen 8 ]****************************************** gps
+#if 1
+#define line_max 21
+static lv_obj_t *scr3_cont;
+static lv_obj_t *scr8_lab_buf[10];
+static lv_timer_t *GPS_loop_timer = NULL;
+
+static void scr_label_line_algin(lv_obj_t *label, int line_len, const char *str1, const char *str2)
+{
+    int w2 = strlen(str2);
+    int w1 = line_len - w2;
+    lv_label_set_text_fmt(label, "%-*s%-*s", w1, str1, w2, str2);
+}
+
+static lv_obj_t * scr3_create_label(lv_obj_t *parent)
+{
+    lv_obj_t *label = lv_label_create(parent);
+    lv_obj_set_width(label, lv_pct(90));
+    lv_obj_set_style_text_font(label, &Font_Mono_Bold_25, LV_PART_MAIN);   
+    lv_obj_set_style_border_width(label, 1, LV_PART_MAIN);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_border_side(label, LV_BORDER_SIDE_BOTTOM, LV_PART_MAIN);
+    return label;
+}
+
+static void scr3_GPS_updata(void)
+{
+    float lat      = 0; // Latitude
+    float lon      = 0; // Longitude
+    float speed    = 0; // Speed over ground
+    float alt      = 0; // Altitude
+    float accuracy = 0; // Accuracy
+    int   vsat     = 0; // Visible Satellites
+    int   usat     = 0; // Used Satellites
+    uint16_t   year     = 0; // 
+    uint8_t   month    = 0; // 
+    uint8_t   day      = 0; // 
+    uint8_t   hour     = 0; // 
+    uint8_t   min      = 0; // 
+    uint8_t   sec      = 0; // 
+
+    char buf[16];
+
+    ui_gps_get_info(&lat, &lon, &speed, &alt, &accuracy, &vsat, &usat, &year, &month, &day, &hour, &min, &sec);
+
+    lv_snprintf(buf, 16, "%0.3f", lat);
+    scr_label_line_algin(scr8_lab_buf[0], line_max, "lat:", buf);
+
+    lv_snprintf(buf, 16, "%0.3f", lon);
+    scr_label_line_algin(scr8_lab_buf[1], line_max, "lon:", buf);
+
+    lv_snprintf(buf, 16, "%0.1f", speed);
+    scr_label_line_algin(scr8_lab_buf[2], line_max, "speed:", buf);
+
+    lv_snprintf(buf, 16, "%0.1f", alt);
+    scr_label_line_algin(scr8_lab_buf[3], line_max, "alt:", buf);
+
+    lv_snprintf(buf, 16, "%d", vsat);
+    scr_label_line_algin(scr8_lab_buf[4], line_max, "vsat:", buf);
+
+    lv_snprintf(buf, 16, "%d", usat);
+    scr_label_line_algin(scr8_lab_buf[5], line_max, "usat:", buf);
+
+    lv_snprintf(buf, 16, "%d", year);
+    scr_label_line_algin(scr8_lab_buf[6], line_max, "year:", buf);
+
+    lv_snprintf(buf, 16, "%d", month);
+    scr_label_line_algin(scr8_lab_buf[7], line_max, "month:", buf);
+
+    lv_snprintf(buf, 16, "%d", day);
+    scr_label_line_algin(scr8_lab_buf[8], line_max, "day:", buf);
+
+    lv_snprintf(buf, 16, "%02d:%02d:%02d", hour, min, sec);
+    scr_label_line_algin(scr8_lab_buf[9], line_max, "time:", buf);
+}
+
+static void GPS_loop_timer_event(lv_timer_t * t)
+{
+    // ui_GPS_print_info();
+    scr3_GPS_updata();
+}
+
+static void scr10_btn_event_cb(lv_event_t * e)
+{
+    if(e->code == LV_EVENT_CLICKED){
+        scr_mgr_pop(false);
+    }
+}
+
+static void create10(lv_obj_t *parent)
+{
+    scr3_cont = lv_obj_create(parent);
+    lv_obj_set_size(scr3_cont, lv_pct(100), lv_pct(88));
+    // lv_obj_set_style_bg_color(scr3_cont, DECKPRO_COLOR_BG, LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(scr3_cont, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(scr3_cont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_border_width(scr3_cont, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(scr3_cont, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_hor(scr3_cont, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(scr3_cont, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(scr3_cont, 0, LV_PART_MAIN);
+    lv_obj_set_align(scr3_cont, LV_ALIGN_BOTTOM_LEFT);
+    lv_obj_set_flex_flow(scr3_cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(scr3_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+
+    for(int i = 0; i < sizeof(scr8_lab_buf) / sizeof(scr8_lab_buf[0]); i++) {
+        scr8_lab_buf[i] = scr3_create_label(scr3_cont);
+    }
+    // back 
+    scr_back_btn_create(parent, "GPS", scr10_btn_event_cb);
+}
+
+static void entry10(void) {
+    scr3_GPS_updata();
+
+    GPS_loop_timer = lv_timer_create(GPS_loop_timer_event, 5000, NULL);
+ 
+}
+static void exit10(void) 
+{
+    if(GPS_loop_timer) {
+        lv_timer_del(GPS_loop_timer);
+        GPS_loop_timer = NULL;
+    }
+}
+static void destroy10(void) { 
+
+}
+
+static scr_lifecycle_t screen10 = {
+    .create = create10,
+    .entry = entry10,
+    .exit  = exit10,
+    .destroy = destroy10,
+};
+#endif
+//************************************[ screen 9 ]****************************************** shutdown
 #if 1
 static void scr8_btn_event_cb(lv_event_t * e)
 {
@@ -2219,7 +2368,7 @@ static scr_lifecycle_t screen8 = {
     .destroy = destroy8,
 };
 #endif
-//************************************[ screen 9 ]****************************************** sleep
+//************************************[ screen 10 ]****************************************** sleep
 #if 1
 static void scr9_btn_event_cb(lv_event_t * e)
 {
@@ -2258,151 +2407,71 @@ static scr_lifecycle_t screen9 = {
     .destroy = destroy9,
 };
 #endif
-//************************************[ screen 10 ]****************************************** gps
-#if 1
-static void scr10_btn_event_cb(lv_event_t * e)
-{
-    if(e->code == LV_EVENT_CLICKED){
-        // ui_full_refresh();
-        scr_mgr_pop(false);
-    }
-}
 
-static void create10(lv_obj_t *parent)
-{
-    // back 
-    scr_back_btn_create(parent, "GPS", scr10_btn_event_cb);
-}
-
-static void entry10(void) {
-    
-}
-static void exit10(void) {
-}
-static void destroy10(void) { 
-
-}
-
-static scr_lifecycle_t screen10 = {
-    .create = create10,
-    .entry = entry10,
-    .exit  = exit10,
-    .destroy = destroy10,
-};
-#endif
 //************************************[ UI ENTRY ]******************************************
 static lv_obj_t *menu_keypad;
 static lv_timer_t *menu_timer = NULL;
 
-static void indev_get_gesture_dir(lv_timer_t *t)
-{
-    lv_indev_data_t data;
-    lv_indev_t * indev_pointer = lv_indev_get_next(NULL);
-    lv_coord_t diff_x = 0;
-    lv_coord_t diff_y = 0;
-
-    static lv_point_t last_point;
-    static bool is_press = false;
-
-    _lv_indev_read(indev_pointer, &data);
-
-    if(data.state == LV_INDEV_STATE_PRESSED){
-
-        if(is_press == false) {
-            is_press = true;
-            last_point = data.point;
-            
-        }
-
-        diff_x = last_point.x - data.point.x;
-        diff_y = last_point.x - data.point.y;
-
-        // Serial.printf("[ui indev] x=%d, y=%d, diffx=%d\n", data.point.x, data.point.y, diff_x);
-
-        if(diff_x > UI_SLIDING_DISTANCE) { // right
-            if(menu_gesture_dir_cb) {
-                menu_gesture_dir_cb(LV_DIR_LEFT);
-            }
-            last_point.x = 0;
-            is_press = false;
-        } else if(diff_x < -UI_SLIDING_DISTANCE) { // left
-            if(menu_gesture_dir_cb) {
-                menu_gesture_dir_cb(LV_DIR_RIGHT);
-            }
-            last_point.x = 0;
-            is_press = false;
-        }
-        
-    } else {
-        is_press = false;
-        last_point.x = 0;
-        last_point.y = 0;
-    }
-}
-
 void menu_taskbar_update_timer_cb(lv_timer_t *t)
 {
-    // // update taskbar buf
-    // static int sec = 0;
-    // sec++;
+    // update taskbar buf
+    static int sec = 0;
+    sec++;
 
-    // uint8_t h = 0, m = 0, s = 0;
-    // bool charge = 0;
-    // bool finish = 0;
-    // int percent = 0;
+    uint8_t h = 0, m = 0, s = 0;
+    bool charge = 0;
+    bool finish = 0;
+    int percent = 0;
 
     
-    // if(sec % 10 == 0)
-    // {
-    //     ui_clock_get_time(&h, &m, &s);
-    //     finish = ui_battery_27220_get_charge_finish();
-    //     percent = ui_battery_27220_get_percent();
+    if(sec % 10 == 0)
+    {
+        ui_clock_get_time(&h, &m, &s);
+        finish = ui_battery_27220_get_charge_finish();
+        percent = ui_battery_27220_get_percent();
 
-    //     if(taskbar_statue[TASKBAR_ID_TIME_MINUTE] != m)
-    //     {
-    //         lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
-    //         taskbar_statue[TASKBAR_ID_TIME_HOUR] = h;
-    //         taskbar_statue[TASKBAR_ID_TIME_MINUTE] = m;
-    //     }
+        if(taskbar_statue[TASKBAR_ID_TIME_MINUTE] != m)
+        {
+            lv_label_set_text_fmt(menu_taskbar_time, "%02d:%02d", h, m);
+            taskbar_statue[TASKBAR_ID_TIME_HOUR] = h;
+            taskbar_statue[TASKBAR_ID_TIME_MINUTE] = m;
+        }
 
-    //     if(taskbar_statue[TASKBAR_ID_CHARGE_FINISH] != finish) 
-    //     {
-    //         if(finish){
-    //             lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_OK);
-    //         } else {
-    //             lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
-    //         }
-    //         taskbar_statue[TASKBAR_ID_CHARGE_FINISH] = finish;
-    //     }
+        if(taskbar_statue[TASKBAR_ID_CHARGE_FINISH] != finish) 
+        {
+            if(finish){
+                lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_OK);
+            } else {
+                lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
+            }
+            taskbar_statue[TASKBAR_ID_CHARGE_FINISH] = finish;
+        }
 
-    //     if(taskbar_statue[TASKBAR_ID_BATTERY_PERCENT] != percent) 
-    //     {
-    //         lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", percent);
-    //         lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
-    //         taskbar_statue[TASKBAR_ID_BATTERY_PERCENT] = percent;
-    //     }
-    // }
+        if(taskbar_statue[TASKBAR_ID_BATTERY_PERCENT] != percent) 
+        {
+            lv_label_set_text_fmt(menu_taskbar_battery_percent, "%d", percent);
+            lv_label_set_text_fmt(menu_taskbar_battery, "%s", ui_battert_27220_get_percent_level());
+            taskbar_statue[TASKBAR_ID_BATTERY_PERCENT] = percent;
+        }
+    }
 
-    // charge = ui_battery_27220_get_input();
-    // if(taskbar_statue[TASKBAR_ID_CHARGE] != charge) 
-    // {
-    //     if(charge) {
-    //         lv_obj_clear_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
-    //     } else {
-    //         lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
-    //     }
-    //     taskbar_statue[TASKBAR_ID_CHARGE] = charge;
-    // }
-    // // taskbar_statue[TASKBAR_ID_WIFI] = ;
+    charge = ui_battery_27220_get_input();
+    if(taskbar_statue[TASKBAR_ID_CHARGE] != charge) 
+    {
+        if(charge) {
+            lv_obj_clear_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
+        }
+        taskbar_statue[TASKBAR_ID_CHARGE] = charge;
+    }
+    // taskbar_statue[TASKBAR_ID_WIFI] = ;
 }
 
 void ui_entry(void)
 {
     lv_disp_t *disp = lv_disp_get_default();
     disp->theme = lv_theme_mono_init(disp, false, LV_FONT_DEFAULT);
-
-    touch_chk_timer = lv_timer_create(indev_get_gesture_dir, LV_INDEV_DEF_READ_PERIOD, NULL);
-    lv_timer_pause(touch_chk_timer);
 
     taskbar_update_timer = lv_timer_create(menu_taskbar_update_timer_cb, 1000, NULL);
     lv_timer_pause(taskbar_update_timer);

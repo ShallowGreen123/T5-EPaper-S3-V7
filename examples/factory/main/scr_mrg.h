@@ -52,7 +52,9 @@ void scr_mgr_set_anim(lv_scr_load_anim_t sw, lv_scr_load_anim_t push, lv_scr_loa
 // set bg color
 void scr_mgr_set_bg_color(uint32_t c);
 //
-int scr_mgr_get_curr_id(void);
+int scr_mgr_get_top_id(void);
+
+lv_obj_t *scr_mgr_get_top_obj(void);
 
 #ifdef __cplusplus
 } /*extern "C"*/

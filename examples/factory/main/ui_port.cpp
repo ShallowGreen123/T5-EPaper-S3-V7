@@ -417,23 +417,37 @@ const char * ui_battert_27220_get_percent_level(void)
 }
 #endif
 //************************************[ screen 8 ]****************************************** gps
-void ui_GPS_get_info(float *lat, float *lon, float *speed, float *alt, float *accuracy,
-             int *vsat,  int *usat,  int *year,    int *month, int *day,
-             int *hour,  int *min,   int *sec)
+void ui_gps_get_info(float *lat, float *lon, float *speed, float *alt, float *accuracy,
+             int *vsat, int *usat, uint16_t *year, uint8_t *month, uint8_t *day,
+             uint8_t *hour,  uint8_t *min, uint8_t *sec)
 {
-    *lat      = gps.satellites.isValid() ? gps.location.lat() : 0;
-    *lon      = gps.location.isValid() ? gps.location.lng() : 0;
-    *speed    = gps.speed.isValid() ? gps.speed.kmph() : 0;
-    *alt      = gps.altitude.isValid() ? gps.altitude.meters() : 0;
-    *accuracy = gps.course.isValid() ? gps.course.deg() : 0;
-    *vsat     = gps.altitude.isValid() ? gps.satellites.value() : 0;
-    *usat     = gps.altitude.isValid() ? gps.satellites.value() : 0;
-    *year     = gps.date.isValid() ? gps.date.year() : 0;
-    *month    = gps.date.isValid() ? gps.date.month() : 0;
-    *day      = gps.date.isValid() ? gps.date.day() : 0;
-    *hour     = gps.time.isValid() ? gps.time.hour() : 0;
-    *min      = gps.time.isValid() ? gps.time.minute() : 0;
-    *sec      = gps.time.isValid() ? gps.time.second() : 0;
+    // *lat      = gps.satellites.isValid() ? gps.location.lat() : 0;
+    // *lon      = gps.location.isValid() ? gps.location.lng() : 0;
+    // *speed    = gps.speed.isValid() ? gps.speed.kmph() : 0;
+    // *alt      = gps.altitude.isValid() ? gps.altitude.meters() : 0;
+    // *accuracy = gps.course.isValid() ? gps.course.deg() : 0;
+    // *vsat     = gps.altitude.isValid() ? gps.satellites.value() : 0;
+    // *usat     = gps.altitude.isValid() ? gps.satellites.value() : 0;
+    // *year     = gps.date.isValid() ? gps.date.year() : 0;
+    // *month    = gps.date.isValid() ? gps.date.month() : 0;
+    // *day      = gps.date.isValid() ? gps.date.day() : 0;
+    // *hour     = gps.time.isValid() ? gps.time.hour() : 0;
+    // *min      = gps.time.isValid() ? gps.time.minute() : 0;
+    // *sec      = gps.time.isValid() ? gps.time.second() : 0;
+
+    *lat = gps_lat;
+    *lon = gps_lng;
+    // *speed = ;
+    // *alt = ;
+    // *accuracy = ;
+    // *vsat = ;
+    // *usat = ;
+    *year  = gps_year;
+    *month = gps_month;
+    *day   = gps_day;
+    *hour  = gps_hour;
+    *min   = gps_minute;
+    *sec   = gps_second;
 }
 
 //************************************[ screen 8 ]****************************************** shutdown

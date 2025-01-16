@@ -19,6 +19,7 @@
 #define XPOWERS_CHIP_BQ25896
 #include <XPowersLib.h>
 #include "board/pca9555.h"
+#include <TinyGPS++.h>
 
 #include "FS.h"
 #include "SD.h"
@@ -57,9 +58,13 @@ enum {
 
 extern bool peri_buf[E_PERI_MAX];
 
-// task
+// gps
 extern TaskHandle_t gps_handle;
-// extern TaskHandle_t lora_handle;
+extern TinyGPSPlus gps;
+extern double gps_lat, gps_lng;
+extern uint16_t gps_year;
+extern uint8_t gps_month, gps_day;
+extern uint8_t gps_hour, gps_minute, gps_second;
 
 // lora
 extern SX1262 radio;
@@ -78,6 +83,7 @@ extern int refresh_mode;
 void disp_full_refresh(void);
 void disp_full_clean(void);
 void disp_refresh_set_mode(int mode);
+void disp_refresh_screen(void);
 
 void indev_touch_en();
 void indev_touch_dis();

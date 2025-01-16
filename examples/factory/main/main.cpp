@@ -28,8 +28,12 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <driver/i2c.h>
+#include "scr_mrg.h"
 
 TaskHandle_t gps_handle;
+TaskHandle_t btn_handle;
+
+TinyGPSPlus gps;
 
 // peripheral
 bool peri_buf[E_PERI_MAX] = {0};
@@ -64,31 +68,120 @@ bool disp_refr_is_busy = false;
 /*********************************************************************************
  *                                   TASK
  * *******************************************************************************/
+const char *gpsStream =
+  "$GPRMC,045103.000,A,3014.1984,N,09749.2872,W,0.67,161.46,030913,,,A*7C\r\n"
+  "$GPGGA,045104.000,3014.1985,N,09749.2873,W,1,09,1.2,211.6,M,-22.5,M,,0000*62\r\n"
+  "$GPRMC,045200.000,A,3014.3820,N,09748.9514,W,36.88,65.02,030913,,,A*77\r\n"
+  "$GPGGA,045201.000,3014.3864,N,09748.9411,W,1,10,1.2,200.8,M,-22.5,M,,0000*6C\r\n"
+  "$GPRMC,045251.000,A,3014.4275,N,09749.0626,W,0.51,217.94,030913,,,A*7D\r\n"
+  "$GPGGA,045252.000,3014.4273,N,09749.0628,W,1,09,1.3,206.9,M,-22.5,M,,0000*6F\r\n";
+
+double gps_lat=0, gps_lng=0;
+uint16_t gps_year=0;
+uint8_t gps_month=0, gps_day=0;
+uint8_t gps_hour=0, gps_minute=0, gps_second=0;
+
+void displayInfo()
+{
+  Serial.print(F("Location: ")); 
+  if (gps.location.isValid())
+  {
+    gps_lat = gps.location.lat();
+    gps_lng = gps.location.lng();
+    Serial.print(gps_lat, 6);
+    Serial.print(F(","));
+    Serial.print(gps_lng, 6);
+  }
+  else
+  {
+    Serial.print(F("INVALID"));
+  }
+
+  Serial.print(F("  Date/Time: "));
+  if (gps.date.isValid())
+  {
+    gps_year = gps.date.year();
+    gps_month = gps.date.month();
+    gps_day = gps.date.day();
+    Serial.print(gps_month);
+    Serial.print(F("/"));
+    Serial.print(gps_day);
+    Serial.print(F("/"));
+    Serial.print(gps_year);
+  }
+  else
+  {
+    Serial.print(F("INVALID"));
+  }
+
+  Serial.print(F(" "));
+  if (gps.time.isValid())
+  {
+    gps_hour = gps.time.hour();
+    gps_minute = gps.time.minute();
+    gps_second = gps.time.second();
+
+    if (gps_hour < 10) Serial.print(F("0"));
+    Serial.print(gps_hour);
+    Serial.print(F(":"));
+    if (gps_minute < 10) Serial.print(F("0"));
+    Serial.print(gps_minute);
+    Serial.print(F(":"));
+    if (gps_second < 10) Serial.print(F("0"));
+    Serial.print(gps_second);
+    Serial.print(F("."));
+  }
+  else
+  {
+    Serial.print(F("INVALID"));
+  }
+
+  Serial.println();
+}
+
 void gps_task(void *param)
 {
     SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
 
     while (1)
     {
-        while (SerialGPS.available())
-        {
-            SerialMon.write(SerialGPS.read());
-        }
-        while (SerialMon.available())
-        {
-            SerialGPS.write(SerialMon.read());
-        }
-        delay(500);
-
-        // if (digitalRead(PCA9535_INT) == LOW)
+        // while (SerialGPS.available())
         // {
-        //     if(button_read()) {
-        //         Serial.printf("Button Press\n");
-        //     }else{
-        //         Serial.printf("Button Release\n");
-        //     }
+        //     SerialMon.write(SerialGPS.read());
         // }
+        // while (SerialMon.available())
+        // {
+        //     SerialGPS.write(SerialMon.read());
+        // }
+        // const char * gpsStr = gpsStream;
+        //     while (*gpsStr)
+        //     if (gps.encode(*gpsStr++))
+        //         displayInfo();
+
+        while (SerialGPS.available() > 0)
+            if (gps.encode(SerialGPS.read()))
+                displayInfo();
+        delay(3000);
+
+        
         // delay(10);
+    }
+}
+
+void btn_task(void *param)
+{
+    while(1)
+    {
+        if (digitalRead(BOARD_PCA9535_INT) == LOW)
+        {
+            if(button_read()) {
+                Serial.printf("Button Press\n");
+                disp_refresh_screen();
+            }else{
+                Serial.printf("Button Release\n");
+            }
+        }
+        delay(100);
     }
 }
 
@@ -144,10 +237,27 @@ void disp_full_clean(void)
     epd_poweroff();
 }
 
+void disp_refresh_screen(void)
+{
+    EpdRect rener_area = {
+        .x = 0,
+        .y = 0,
+        .width = epd_rotated_display_width(),
+        .height = epd_rotated_display_height(),
+    };
+
+    disp_full_clean();
+    disp_full_refresh();
+
+    epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
+    epd_poweron();
+    checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+    epd_poweroff();
+}
+
 /*********************************************************************************
  *                            STATIC  FUNCTION
  * *******************************************************************************/
-
 static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 {
     if(disp_flush_enabled) {
@@ -319,21 +429,7 @@ static bool touch_gt911_init(void)
     // Set the center button to trigger the callback , Only for specific devices, e.g LilyGo-EPD47 S3 GT911
     touch.setHomeButtonCallback([](void *user_data) {
         Serial.println("Home button pressed!");
-
-        EpdRect rener_area = {
-            .x = 0,
-            .y = 0,
-            .width = epd_rotated_display_width(),
-            .height = epd_rotated_display_height(),
-        };
-
-        disp_full_clean();
-        disp_full_refresh();
-
-        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
-        epd_poweron();
-        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
-        epd_poweroff();
+        scr_mgr_switch(0, false); // Return to the main screen
     }, NULL);
 
     touch.setInterruptMode(LOW_LEVEL_QUERY);
@@ -466,7 +562,7 @@ static bool bq25896_init(void)
 
 static bool bq27220_init(void)
 {
-    return bq27220.init();;
+    return bq27220.init();
 }
 
 static bool sd_card_init(void)
@@ -557,22 +653,23 @@ void idf_setup()
     ui_setting_get_backlight(&backlight);
     ui_setting_set_backlight(backlight);
 
+    peri_buf[E_PERI_BQ27220]    = bq27220_init();   // PMU --- 0x55
+
     screen_init();
     io_extend_lora_gps_power_on(true);
 
     peri_buf[E_PERI_INK_POWER]  = false; 
+    
     peri_buf[E_PERI_BQ25896]    = bq25896_init();   // PMU --- 0x6B
-    peri_buf[E_PERI_BQ27220]    = bq27220_init();   // PMU --- 0x55
     peri_buf[E_PERI_RTC]        = rtc_pcf8563_init(); // RTC --- 0x51
     peri_buf[E_PERI_TOUCH]      = touch_gt911_init();  // Touch --- 0x5D;
     peri_buf[E_PERI_LORA]       = lora_sx1262_init();
     peri_buf[E_PERI_SD_CARD]    = sd_card_init();
     peri_buf[E_PERI_GPS]        = gps_init();
 
-    // xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
-    // xTaskCreate(lora_task, "lora_task", 1024 * 3, NULL, LORA_PRIORITY, &lora_handle);
-    // vTaskSuspend(gps_handle);
-    // vTaskSuspend(lora_handle);
+    xTaskCreate(gps_task, "gps_task", 1024 * 3, NULL, NFC_PRIORITY, &gps_handle);
+    xTaskCreate(btn_task, "lora_task", 1024 * 3, NULL, INFARED_PRIORITY, &btn_handle);
+    vTaskSuspend(gps_handle);
 
     printf("LVGL Init\n");
     lv_port_disp_init();
