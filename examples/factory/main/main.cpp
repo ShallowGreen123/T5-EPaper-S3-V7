@@ -29,7 +29,8 @@
 #include <SPI.h>
 #include <driver/i2c.h>
 #include "scr_mrg.h"
-
+#include "firasans_12.h"
+#include "firasans_20.h"
 
 TaskHandle_t btn_handle;
 
@@ -45,8 +46,6 @@ BQ27220 bq27220;
 #define WAVEFORM EPD_BUILTIN_WAVEFORM
 #define DEMO_BOARD epd_board_v7
 EpdiyHighlevelState hl;
-int temperature = 0;
-uint8_t* fb = NULL;
 
 // Touch
 TouchDrvGT911 touch;
@@ -112,7 +111,7 @@ void disp_full_refresh(void)
 {
     epd_hl_set_all_white(&hl);
     epd_poweron();
-    checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+    checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
     epd_poweroff();
 }
 
@@ -150,7 +149,7 @@ void disp_refresh_screen(void)
 
     epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
     epd_poweron();
-    checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+    checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
     epd_poweroff();
 }
 
@@ -187,7 +186,7 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
         // disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
-        // checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        // checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
         checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
         epd_poweroff();
     } 
@@ -196,7 +195,7 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
         // disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
-        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
         // checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
         epd_poweroff();
     } 
@@ -205,7 +204,7 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
         disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
-        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
         epd_poweroff();
     }
     /* Inform the graphics library that you are ready with the flushing */
@@ -226,7 +225,7 @@ static void flush_timer_cb(lv_timer_t *t)
         // disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
-        // checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        // checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
         checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
         epd_poweroff();
     } 
@@ -235,7 +234,7 @@ static void flush_timer_cb(lv_timer_t *t)
         // disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
-        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
         // checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
         epd_poweroff();
     } 
@@ -244,7 +243,7 @@ static void flush_timer_cb(lv_timer_t *t)
         disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
         epd_poweron();
-        checkError(epd_hl_update_screen(&hl, MODE_GC16, temperature));
+        checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
         epd_poweroff();
     }
     // static int cnt = 0;
@@ -359,6 +358,24 @@ static bool rtc_pcf8563_init(void)
     return true;
 }
 
+static void disp_init_status(const char *name, int *x, int *y, bool init_st)
+{
+    char buf[32] = {0};
+    EpdFontProperties font_props = epd_font_properties_default();
+    font_props.flags = EPD_DRAW_ALIGN_LEFT;
+
+    const EpdFont* font;
+    font = &FiraSans_12;
+
+    snprintf(buf, 32, "[%s] %s", (init_st == true? "✔":"✖"), name);
+
+    epd_write_string( font, buf, x, y, epd_hl_get_framebuffer(&hl), &font_props);
+    epd_poweron();
+    checkError(epd_hl_update_screen(&hl, MODE_GL16, epd_ambient_temperature()));
+    epd_poweroff();
+
+}
+
 static bool screen_init(void)
 {
     epd_init(&DEMO_BOARD, &ED047TC1, EPD_LUT_64K);
@@ -391,9 +408,24 @@ static bool screen_init(void)
     // epd_poweroff();
 
     disp_full_clean();
-    temperature = epd_ambient_temperature();
 
-    printf("current temperature: %d\n", temperature);
+    int cursor_x = 250;
+    int cursor_y = epd_rotated_display_height() / 2 - 250;
+
+    EpdFontProperties font_props = epd_font_properties_default();
+    font_props.flags = EPD_DRAW_ALIGN_CENTER;
+
+    const EpdFont* font;
+    font = &FiraSans_20;
+
+    epd_write_string(
+        font, "Initialize    System", &cursor_x, &cursor_y, epd_hl_get_framebuffer(&hl), &font_props
+    );
+    epd_poweron();
+    epd_hl_update_screen(&hl, MODE_GL16, epd_ambient_temperature());
+    epd_poweroff();
+
+    printf("current temperature: %d\n", epd_ambient_temperature());
 
     return true;
 }
@@ -494,6 +526,7 @@ static bool sd_card_init(void)
 void idf_setup() 
 {
     int backlight = 0;
+    
 
     gpio_hold_dis((gpio_num_t)BOARD_TOUCH_RST);
     gpio_hold_dis((gpio_num_t)BOARD_LORA_RST);
@@ -505,9 +538,6 @@ void idf_setup()
     digitalWrite(BOARD_LORA_CS, HIGH);
     pinMode(BOARD_SD_CS, OUTPUT);
     digitalWrite(BOARD_SD_CS, HIGH);
-
-    // pinMode(BOARD_GPS_RXD, OUTPUT);
-    // pinMode(BOARD_GPS_TXD, OUTPUT);
 
     // Set the interrupt input to input pull-up
     if (BOARD_PCA9535_INT > 0) {
@@ -526,19 +556,47 @@ void idf_setup()
     ui_setting_set_backlight(backlight);
 
     peri_buf[E_PERI_BQ27220]    = bq27220_init();   // PMU --- 0x55
-
+    
     screen_init();
     io_extend_lora_gps_power_on(true);
 
-    peri_buf[E_PERI_INK_POWER]  = false; 
-    
-    peri_buf[E_PERI_BQ25896]    = bq25896_init();   // PMU --- 0x6B
-    peri_buf[E_PERI_RTC]        = rtc_pcf8563_init(); // RTC --- 0x51
-    peri_buf[E_PERI_TOUCH]      = touch_gt911_init();  // Touch --- 0x5D;
-    peri_buf[E_PERI_LORA]       = lora_sx1262_init();
-    peri_buf[E_PERI_SD_CARD]    = sd_card_init();
-    peri_buf[E_PERI_GPS]        = gps_init();
+    int cursor_x = 100;
+    int cursor_y = epd_rotated_display_height() / 2 - 100;
+    disp_init_status("BQ27220 Init ...", &cursor_x, &cursor_y, peri_buf[E_PERI_BQ27220]);
 
+    peri_buf[E_PERI_INK_POWER]  = false; 
+
+    peri_buf[E_PERI_BQ25896]    = bq25896_init();   // PMU --- 0x6B
+    cursor_x = 100;
+    cursor_y = epd_rotated_display_height() / 2 - 100 + 50;
+    disp_init_status("BQ25896 Init ...", &cursor_x, &cursor_y, peri_buf[E_PERI_BQ25896]);
+
+    peri_buf[E_PERI_RTC]        = rtc_pcf8563_init(); // RTC --- 0x51
+    cursor_x = 100;
+    cursor_y = epd_rotated_display_height() / 2 - 100 + 100;
+    disp_init_status("RTC (PCF8563) Init ...", &cursor_x, &cursor_y, peri_buf[E_PERI_RTC]);
+
+    peri_buf[E_PERI_TOUCH]      = touch_gt911_init();  // Touch --- 0x5D;
+    cursor_x = 100;
+    cursor_y = epd_rotated_display_height() / 2 - 100 + 150;
+    disp_init_status("Touch (GT911) Init ...", &cursor_x, &cursor_y, peri_buf[E_PERI_TOUCH]);
+
+    peri_buf[E_PERI_LORA]       = lora_sx1262_init();
+    cursor_x = 100;
+    cursor_y = epd_rotated_display_height() / 2 - 100 + 200;
+    disp_init_status("LoRa (SX1262) Init ...", &cursor_x, &cursor_y, peri_buf[E_PERI_LORA]);
+
+    peri_buf[E_PERI_SD_CARD]    = sd_card_init();
+    cursor_x = 100;
+    cursor_y = epd_rotated_display_height() / 2 - 100 + 250;
+    disp_init_status("SD Card Init ...", &cursor_x, &cursor_y, peri_buf[E_PERI_SD_CARD]);
+
+    peri_buf[E_PERI_GPS]        = gps_init();
+    cursor_x = 100;
+    cursor_y = epd_rotated_display_height() / 2 - 100 +300;
+    disp_init_status("GPS Init ...", &cursor_x, &cursor_y, peri_buf[E_PERI_GPS]);
+
+    // task
     xTaskCreate(btn_task, "lora_task", 1024 * 3, NULL, INFARED_PRIORITY, &btn_handle);
     
     printf("LVGL Init\n");
