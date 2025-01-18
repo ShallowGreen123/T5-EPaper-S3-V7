@@ -30,8 +30,14 @@ void ui_lora_send(const char *str);
 bool ui_lora_recv(const char **str, int *rssi);
 void ui_lora_clean_recv_flag(void);
 
+float ui_lora_get_freq(void);
+float ui_lora_get_bandwidth(void);
+int16_t ui_lora_get_output_power(void);
+uint8_t ui_lora_get_spread_factor(void);
+
 // sd
 void ui_sd_read(void);
+void ui_sd_get_capacity(uint64_t *total, uint64_t *used);
 
 // setting
 int ui_setting_get_vcom(void);

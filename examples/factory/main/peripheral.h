@@ -10,7 +10,11 @@
 #define INFARED_PRIORITY (configMAX_PRIORITIES - 5)
 
 // lora sx1262
-#define LORA_FREQ      850.0
+#define LORA_FREQUENNCY     868.0
+#define LORA_BANDWIDTH      250.0
+#define LORA_OUTPUT_POWER   22 // -17 - 22 dBm
+#define LORA_SPREAD_FACTOR  10
+
 #define LORA_MODE_SEND 0
 #define LORA_MODE_RECV 1
 

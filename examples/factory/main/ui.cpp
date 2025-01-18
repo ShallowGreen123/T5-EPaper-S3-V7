@@ -13,8 +13,10 @@
 #define GLOBAL_BUF_LEN 48
 char global_buf[GLOBAL_BUF_LEN];
 
+static int scr_refresh_mode;
 static lv_timer_t *taskbar_update_timer = NULL;
 uint16_t taskbar_statue[TASKBAR_ID_MAX] = {0};
+struct tm timeinfo = {0};
 //************************************[ Other fun ]******************************************
 #if 1
 void scr_back_btn_create(lv_obj_t *parent, const char *text, lv_event_cb_t cb)
@@ -411,7 +413,11 @@ static void create0(lv_obj_t *parent)
 
     menu_taskbar_wifi = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_wifi, "%s", LV_SYMBOL_WIFI);
-    lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+    if(taskbar_statue[TASKBAR_ID_WIFI]) {
+        lv_obj_clear_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+    }
 
     menu_taskbar_sd = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_sd, "%s", LV_SYMBOL_SD_CARD);
@@ -884,9 +890,23 @@ static void create2_1(lv_obj_t *parent)
     lv_obj_set_style_pad_all(scr2_1_cont, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_hor(scr2_1_cont, 20, LV_PART_MAIN);
     lv_obj_set_flex_flow(scr2_1_cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_top(scr2_1_cont, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_row(scr2_1_cont, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_column(scr2_1_cont, 5, LV_PART_MAIN);
     lv_obj_align(scr2_1_cont, LV_ALIGN_BOTTOM_MID, 0, -20);
+
+    lv_obj_t *scr2_1_info = lv_label_create(parent);
+    lv_obj_set_style_text_font(scr2_1_info, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_obj_set_style_text_align(scr2_1_info, LV_TEXT_ALIGN_LEFT, 0);
+                                    // "Frequery:***MHz    Bandwidth:***KHz\n"
+    lv_label_set_text_fmt(scr2_1_info, "Freq: %.0fMHz    BD: %.0fKHz\n"
+                                       "Power: %d       Spread: %d",
+                                        ui_lora_get_freq(),
+                                        ui_lora_get_bandwidth(),
+                                        ui_lora_get_output_power(),
+                                        ui_lora_get_spread_factor());
+    lv_obj_set_style_border_width(scr2_1_info, 0, LV_PART_MAIN);
+    lv_obj_align(scr2_1_info, LV_ALIGN_TOP_MID, 0, 85);
 
     for(int i = 0; i < ARRAY_LEN(scr2_lab_buf); i++) {
         scr2_lab_buf[i] = scr2_1_create_label(scr2_1_cont);
@@ -950,8 +970,6 @@ static int send_cnt = 0;
 static int recv_cnt = 0;
 static int lora_lab_cnt = 0;
 int lab_idx = 0;
-
-static int scr2_2_refresh_mode;
 
 static lv_obj_t *scr2_2_cont_info;
 
@@ -1085,6 +1103,8 @@ static void ta_event_cb(lv_event_t * e)
         }
         lv_textarea_set_text(ta,"");
     }
+
+    ui_refresh_set_mode(UI_REFRESH_MODE_FAST);
 }
 
 static void scr2_2_btn_event_cb(lv_event_t * e)
@@ -1168,8 +1188,9 @@ static void create2_2(lv_obj_t *parent)
 }
 static void entry2_2(void) 
 {
-    ui_setting_get_refresh_speed(&scr2_2_refresh_mode);
-    ui_refresh_set_mode(UI_REFRESH_MODE_FAST);
+    lora_lab_cnt = 0;
+
+    ui_setting_get_refresh_speed(&scr_refresh_mode);
 
     if(ui_lora_get_mode() == LORA_MODE_RECV) {
         ui_lora_set_mode(LORA_MODE_SEND);
@@ -1177,7 +1198,7 @@ static void entry2_2(void)
 }
 static void exit2_2(void) 
 {
-    ui_refresh_set_mode(scr2_2_refresh_mode);
+    ui_refresh_set_mode(scr_refresh_mode);
 }
 static void destroy2_2(void) { }
 
@@ -1190,7 +1211,6 @@ static scr_lifecycle_t screen2_2 = {
 #endif
 //************************************[ screen 3 ]****************************************** sd_card
 #if 1
-
 static lv_obj_t *scr3_cont_file;
 static lv_obj_t *scr3_cont_img;
 static lv_obj_t *sd_info;
@@ -1353,6 +1373,13 @@ static void create4_1(lv_obj_t *parent)
     str += "\n                           \n";
 
     str += line_full_format(32, "HD Version:", ui_setting_get_hd_ver());
+    str += "\n                           \n";
+
+    char buf[32];
+    uint64_t total=0, used=0;
+    ui_sd_get_capacity(&total, &used);
+    lv_snprintf(buf, 32, "%llu/%llu MB", used, total);
+    str += line_full_format(32, "TF Card Cap:", (const char *)buf);
     str += "\n                           \n";
 
     lv_label_set_text_fmt(info, str.c_str());
@@ -1781,9 +1808,10 @@ static scr_lifecycle_t screen5 = {
 #if 1
 lv_obj_t *scr6_root;
 lv_obj_t *wifi_st_lab = NULL;
-lv_obj_t *ip_lab;
-lv_obj_t *ssid_lab;
-lv_obj_t *pwd_lab;
+lv_obj_t *ip_lab = NULL;
+lv_obj_t *ssid_lab = NULL;
+lv_obj_t *pwd_lab = NULL;
+static lv_timer_t   *wifi_rssi_timer            = NULL;
 
 static volatile bool smartConfigStart      = false;
 static lv_timer_t   *wifi_timer            = NULL;
@@ -1801,14 +1829,22 @@ static void wifi_info_label_create(lv_obj_t *parent)
     ssid_lab = lv_label_create(parent);
     // lv_obj_set_style_text_color(ssid_lab, lv_color_hex(COLOR_TEXT), LV_PART_MAIN);
     lv_obj_set_style_text_font(ssid_lab, &Font_Mono_Bold_25, LV_PART_MAIN);
-    lv_label_set_text_fmt(ssid_lab, "ssid: %s", ui_wifi_get_ssid());
+    lv_label_set_text_fmt(ssid_lab, "ssid: %s", WiFi.SSID().c_str());
     lv_obj_align_to(ssid_lab, ip_lab, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 10);
 
     pwd_lab = lv_label_create(parent);
     // lv_obj_set_style_text_color(pwd_lab, lv_color_hex(COLOR_TEXT), LV_PART_MAIN);
     lv_obj_set_style_text_font(pwd_lab, &Font_Mono_Bold_25, LV_PART_MAIN);
-    lv_label_set_text_fmt(pwd_lab, "pswd: %s", ui_wifi_get_pwd());
+    lv_label_set_text_fmt(pwd_lab, "rssi: %ddB", WiFi.RSSI());
     lv_obj_align_to(pwd_lab, ssid_lab, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 10);
+}
+
+static void wifi_rssi_update_timer(lv_timer_t *t)
+{
+    if(ui_wifi_get_status())
+    {
+        lv_label_set_text_fmt(pwd_lab, "rssi: %ddB", WiFi.RSSI());
+    }
 }
 
 static void wifi_config_event_handler(lv_event_t *e)
@@ -1819,6 +1855,8 @@ static void wifi_config_event_handler(lv_event_t *e)
     if(code != LV_EVENT_CLICKED) {
         return;
     }
+
+    ui_refresh_set_mode(UI_REFRESH_MODE_FAST);
 
     if(ui_wifi_get_status()){
         Serial.println(" WiFi is connected do not need to configure WiFi.");
@@ -1849,6 +1887,18 @@ static void wifi_config_event_handler(lv_event_t *e)
             Serial.println("Connect timeout!");
             destory = true;
             Serial.println("[wifi config] Time Out");
+        } else {
+            switch (step)
+            {
+                case 0: lv_label_set_text(wifi_st_lab, "Connecting -"); break;
+                case 1: lv_label_set_text(wifi_st_lab, "Connecting /"); break;
+                case 2: lv_label_set_text(wifi_st_lab, "Connecting -"); break;
+                case 3: lv_label_set_text(wifi_st_lab, "Connecting \\"); break;
+                default:
+                    break;
+            }
+            step++;
+            step &= 0x3;
         }
         if (WiFi.isConnected()) {
             Serial.println("WiFi has connected!");
@@ -1877,6 +1927,7 @@ static void wifi_config_event_handler(lv_event_t *e)
             Serial.println("[wifi config] WiFi has connected!");
 
             lv_label_set_text(wifi_st_lab, (ui_wifi_get_status() == true ? "Wifi Connect" : "Wifi Disconnect"));
+            
             wifi_info_label_create(scr6_root);
         }
         if (destory) {
@@ -1911,7 +1962,6 @@ static void create6(lv_obj_t *parent)
     lv_label_set_text(wifi_st_lab, (ui_wifi_get_status() ? "Wifi Connect" : "Wifi Disconnect"));
     lv_obj_set_style_text_align(wifi_st_lab, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
     lv_obj_align(wifi_st_lab, LV_ALIGN_BOTTOM_RIGHT, -0, -190);
-
 
     if(ui_wifi_get_status()) {
         wifi_info_label_create(parent);
@@ -1967,6 +2017,7 @@ static void create6(lv_obj_t *parent)
     lv_obj_set_size(btn, 200, 60);
     lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, -20, -120);
     lv_obj_set_style_radius(btn, 10, LV_PART_MAIN);
+    lv_obj_set_style_border_width(btn, 2, LV_PART_MAIN);
     label = lv_label_create(btn);
     lv_label_set_text(label, "Config Wifi");
     lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
@@ -1980,9 +2031,30 @@ static void create6(lv_obj_t *parent)
     scr_back_btn_create(parent, "Wifi", scr6_btn_event_cb);
 }
 static void entry6(void) 
-{ }
+{
+    ui_setting_get_refresh_speed(&scr_refresh_mode);
+
+    wifi_rssi_timer = lv_timer_create(wifi_rssi_update_timer, 3000, NULL);
+}
 static void exit6(void) 
-{ }
+{
+    ui_refresh_set_mode(scr_refresh_mode);
+
+    if (wifi_timer) {
+        lv_timer_del(wifi_timer);
+        wifi_timer = NULL;
+
+        WiFi.stopSmartConfig();
+        smartConfigStart = false;
+        wifi_timer         = NULL;
+        wifi_timer_counter = 0;
+    }
+
+    if (wifi_rssi_timer) {
+        lv_timer_del(wifi_rssi_timer);
+        wifi_rssi_timer = NULL;
+    }
+}
 static void destroy6(void) 
 {
     ui_set_rotation(LV_DISP_ROT_NONE);
@@ -1994,17 +2066,6 @@ static scr_lifecycle_t screen6 = {
     .exit  = exit6,
     .destroy = destroy6,
 };
-
-/*** UI interfavce ***/
-String  __attribute__((weak)) ui_if_epd_get_WIFI_ip(void) {
-    return "WIFI not connected";
-}
-const char * __attribute__((weak)) ui_if_epd_get_WIFI_ssid(void) {
-    return "WIFI not connected";
-}
-const char * __attribute__((weak)) ui_if_epd_get_WIFI_pwd(void) {
-    return "WIFI not connected";
-}
 // end
 #endif
 //************************************[ screen 7 ]****************************************** battery
@@ -2514,6 +2575,7 @@ void menu_taskbar_update_timer_cb(lv_timer_t *t)
     uint8_t h = 0, m = 0, s = 0;
     bool charge = 0;
     bool finish = 0;
+    bool wifi = 0;
     int percent = 0;
 
     
@@ -2558,7 +2620,17 @@ void menu_taskbar_update_timer_cb(lv_timer_t *t)
         }
         taskbar_statue[TASKBAR_ID_CHARGE] = charge;
     }
-    // taskbar_statue[TASKBAR_ID_WIFI] = ;
+
+    wifi = ui_wifi_get_status();
+    if(taskbar_statue[TASKBAR_ID_WIFI] != wifi)
+    {
+        if(wifi) {
+            lv_obj_clear_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(menu_taskbar_wifi, LV_OBJ_FLAG_HIDDEN);
+        }
+        taskbar_statue[TASKBAR_ID_WIFI] = wifi;
+    }
 }
 
 void ui_entry(void)

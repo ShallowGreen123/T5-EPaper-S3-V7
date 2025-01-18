@@ -59,7 +59,7 @@ bool lora_sx1262_init(void)
     // when packet transmission is finished
     radio.setPacketSentAction(set_transmit_flag);
 
-    if (radio.setFrequency(868.0) == RADIOLIB_ERR_INVALID_FREQUENCY)
+    if (radio.setFrequency(LORA_FREQUENNCY) == RADIOLIB_ERR_INVALID_FREQUENCY)
     {
         Serial.println(F("Selected frequency is invalid for this module!"));
         // while (true)
@@ -67,7 +67,7 @@ bool lora_sx1262_init(void)
     }
 
     // set bandwidth to 250 kHz
-    if (radio.setBandwidth(250.0) == RADIOLIB_ERR_INVALID_BANDWIDTH)
+    if (radio.setBandwidth(LORA_BANDWIDTH) == RADIOLIB_ERR_INVALID_BANDWIDTH)
     {
         Serial.println(F("Selected bandwidth is invalid for this module!"));
         // while (true)
@@ -75,7 +75,7 @@ bool lora_sx1262_init(void)
     }
 
     // set spreading factor to 10
-    if (radio.setSpreadingFactor(10) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
+    if (radio.setSpreadingFactor(LORA_SPREAD_FACTOR) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
     {
         Serial.println(F("Selected spreading factor is invalid for this module!"));
         // while (true)
@@ -99,7 +99,7 @@ bool lora_sx1262_init(void)
     }
 
     // set output power to 22 dBm (accepted range is -17 - 22 dBm)
-    if (radio.setOutputPower(22) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
+    if (radio.setOutputPower(LORA_OUTPUT_POWER) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
     {
         Serial.println(F("Selected output power is invalid for this module!"));
         // while (true)

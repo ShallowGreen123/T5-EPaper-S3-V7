@@ -144,10 +144,39 @@ void ui_lora_clean_recv_flag(void)
 {
     lora_set_recv_flag();
 }
+
+float ui_lora_get_freq(void)            { return LORA_FREQUENNCY; }
+float ui_lora_get_bandwidth(void)       { return LORA_BANDWIDTH; }
+int16_t ui_lora_get_output_power(void)  { return LORA_OUTPUT_POWER; }
+uint8_t ui_lora_get_spread_factor(void) { return LORA_SPREAD_FACTOR; }
 //************************************[ screen 3 ]****************************************** sd_card
 void ui_sd_read(void)
 {
 
+}
+
+void ui_sd_get_capacity(uint64_t *total, uint64_t *used)
+{
+    int ret = 0;
+    ui_test_get_sd(&ret);
+    if(ret)
+    {
+        if(total)
+            *total = SD.totalBytes() / (1024 * 1024);
+        if(used)
+            *used = SD.usedBytes() / (1024 * 1024);
+
+        printf("total=%lluMB, used=%lluMB\n", *total, *used);
+
+        uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+        Serial.printf("SD Card Size: %lluMB\n", cardSize);
+
+        uint64_t totalSize = SD.totalBytes() / (1024 * 1024);
+        Serial.printf("SD Card Total: %lluMB\n", totalSize);
+
+        uint64_t usedSize = SD.usedBytes() / (1024 * 1024);
+        Serial.printf("SD Card Used: %lluMB\n", usedSize);
+    }
 }
 //************************************[ screen 4 ]****************************************** setting
 #if 1
@@ -279,28 +308,30 @@ const char *ui_test_get_BQ27220(int *ret_n)
 //************************************[ screen 6 ]****************************************** wifi
 bool ui_wifi_get_status(void)
 {
-    return false;
+    return peri_buf[E_PERI_WIFI];
 }
 void ui_wifi_set_status(bool statue)
 {
-
+    peri_buf[E_PERI_WIFI] = statue;
 }
 
 String ui_wifi_get_ip(void)
 {
-    // return WiFi.localIP().toString();
-    return "WIFI not connected";
+    return WiFi.localIP().toString();
+    // return "WIFI not connected";
 }
 const char *ui_wifi_get_ssid(void)
 {
-    // return wifi_ssid;
     return "WIFI not connected";
+    // return WiFi.SSID().c_str();
+    
 }
 const char *ui_wifi_get_pwd(void)
 {
-    // return wifi_password;
     return "WIFI not connected";
+    // return WiFi.psk().c_str();
 }
+
 //************************************[ screen 7 ]****************************************** battery
 #if 1
 /* 25896 */

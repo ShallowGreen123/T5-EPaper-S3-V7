@@ -53,6 +53,7 @@ enum {
     E_PERI_LORA,
     E_PERI_SD_CARD,
     E_PERI_GPS,
+    E_PERI_WIFI,
     E_PERI_MAX,
 };
 
