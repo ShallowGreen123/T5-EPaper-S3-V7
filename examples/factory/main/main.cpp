@@ -57,7 +57,6 @@ SensorPCF8563 rtc;
 #define DISP_BUF_SIZE (epd_rotated_display_width() * epd_rotated_display_height())
 int refresh_mode = REFRESH_MODE_NORMAL;
 uint8_t *decodebuffer = NULL;
-lv_timer_t *flush_timer = NULL;
 volatile bool disp_flush_enabled = true;
 volatile bool indev_touch_enabled = true;
 bool disp_refr_is_busy = false;
@@ -135,6 +134,11 @@ void disp_full_clean(void)
     epd_poweroff();
 }
 
+void dips_clean(void)
+{
+    disp_refresh_screen();
+}
+
 void disp_refresh_screen(void)
 {
     EpdRect rener_area = {
@@ -209,58 +213,6 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
     }
     /* Inform the graphics library that you are ready with the flushing */
     lv_disp_flush_ready(disp);
-}
-
-static void flush_timer_cb(lv_timer_t *t)
-{
-    EpdRect rener_area = {
-        .x = 0,
-        .y = 0,
-        .width = epd_rotated_display_width(),
-        .height = epd_rotated_display_height(),
-    };
-
-    if(refresh_mode == REFRESH_MODE_FAST) 
-    {
-        // disp_full_refresh();
-        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
-        epd_poweron();
-        // checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
-        checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
-        epd_poweroff();
-    } 
-    else if(refresh_mode == REFRESH_MODE_NORMAL)
-    {
-        // disp_full_refresh();
-        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
-        epd_poweron();
-        checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
-        // checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
-        epd_poweroff();
-    } 
-    else if(refresh_mode == REFRESH_MODE_NEAT)
-    {
-        disp_full_refresh();
-        epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
-        epd_poweron();
-        checkError(epd_hl_update_screen(&hl, MODE_GC16, epd_ambient_temperature()));
-        epd_poweroff();
-    }
-    // static int cnt = 0;
-    // printf("[flush] %d\n", cnt++);
-    lv_timer_pause(flush_timer);
-}
-
-static void dips_render_start_cb(struct _lv_disp_drv_t * disp_drv)
-{
-    if(flush_timer == NULL) {
-        flush_timer = lv_timer_create(flush_timer_cb, 200, NULL);
-        lv_timer_ready(flush_timer);
-    } else {
-        lv_timer_ready(flush_timer);
-        lv_timer_resume(flush_timer);
-    }
-    // printf("dips_render_start_cb\n");
 }
 
 static void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data)

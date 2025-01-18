@@ -4,6 +4,7 @@
 #include "utilities.h"
 #include "peripheral.h"
 #include "epdiy.h"
+#include "ui_port.h"
 
 int ui_setting_backlight = 3;  // 0 - 3
 int epd_vcom_default = 1560;
@@ -22,6 +23,8 @@ void ui_indev_touch_dis(void)
 
 void ui_refresh_set_mode(int mode)
 {
+    mode = mode < UI_REFRESH_MODE_FAST ? UI_REFRESH_MODE_FAST : mode;
+    mode = mode > UI_REFRESH_MODE_NEAT ? UI_REFRESH_MODE_NEAT : mode;
     disp_refresh_set_mode(mode);
 }
 
@@ -33,6 +36,11 @@ void ui_full_refresh(void)
 void ui_full_clean(void)
 {
     disp_full_clean();
+}
+
+void ui_epd_clean(void)
+{
+    dips_clean();
 }
 
 void ui_set_rotation(lv_disp_rot_t rot)
@@ -295,20 +303,6 @@ const char *ui_wifi_get_pwd(void)
 }
 //************************************[ screen 7 ]****************************************** battery
 #if 1
-
-int battery_get_capacity(void)
-{
-    static int bat = 50;
-    // return lv_rand(0, 100);
-
-    bat += 5;
-    if(bat >= 100) {
-        bat = 0;
-    }
-
-    return bat;
-}
-
 /* 25896 */
 void battery_chg_encharge(void)
 {
@@ -326,14 +320,14 @@ bool battery_25896_is_vaild(void)
     // return 1;
 }
 
+bool battery_25896_is_vbus_in(void)
+{
+    return PPM.isVbusIn();
+}
+
 bool battery_25896_is_chr(void)
 {
-    if(PPM.isCharging() == false) {
-        return false;
-    } else {
-        return true;
-    }
-    return 0;
+    return PPM.isCharging();
 }
 
 void battery_25896_refr(void)
@@ -383,7 +377,6 @@ float battery_25896_get_CHG_CURR(void)
 float battery_25896_get_PREC_CURR(void)
 {
     return (PPM.getPrechargeCurr());
-    // return 0;
 }
 
 /* 27220 */

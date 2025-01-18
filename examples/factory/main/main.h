@@ -82,6 +82,7 @@ extern int refresh_mode;
 
 void disp_full_refresh(void);
 void disp_full_clean(void);
+void dips_clean(void);
 void disp_refresh_set_mode(int mode);
 void disp_refresh_screen(void);
 

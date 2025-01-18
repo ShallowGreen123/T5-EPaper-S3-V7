@@ -426,7 +426,11 @@ static void create0(lv_obj_t *parent)
 
     menu_taskbar_charge = lv_label_create(status_parent);
     lv_label_set_text_fmt(menu_taskbar_charge, "%s", LV_SYMBOL_CHARGE);
-    lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
+    if(taskbar_statue[TASKBAR_ID_CHARGE]) {
+        lv_obj_clear_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(menu_taskbar_charge, LV_OBJ_FLAG_HIDDEN);
+    }
 
     menu_taskbar_battery = lv_label_create(status_parent);
 
@@ -685,123 +689,6 @@ static scr_lifecycle_t screen1 = {
 //************************************[ screen 2 ]****************************************** lora
 // --------------------- screen --------------------- lora
 #if 1
-// #define LORA_RECV_INFO_MAX_LINE 12
-
-// static int lora_mode_st = LORA_MODE_SEND;
-// static lv_obj_t *lora_mode_lab;
-// static lv_obj_t *lora_mode_sw;
-// static lv_obj_t *keyborad;
-// static lv_obj_t *textarea;
-// static lv_obj_t *cnt_label;
-// static lv_timer_t *lora_send_timer = NULL;
-
-// static int send_cnt = 0;
-// static int recv_cnt = 0;
-// static int lora_lab_cnt = 0;
-
-// static lv_obj_t *scr2_cont_info;
-// static lv_obj_t *lora_lab_buf[LORA_RECV_INFO_MAX_LINE] = {0};
-
-// static lv_obj_t * scr2_create_label(lv_obj_t *parent)
-// {
-//     lv_obj_t *label = lv_label_create(parent);
-//     lv_obj_set_width(label, LCD_HOR_SIZE/2-50);
-//     lv_obj_set_style_text_font(label, &Font_Mono_Bold_25, LV_PART_MAIN);   
-//     // lv_obj_set_style_border_width(label, 1, LV_PART_MAIN);
-//     lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
-//     return label;
-// }
-
-// static void lora_send_timer_event(lv_timer_t *t)
-// {
-//     if(lora_mode_st == LORA_MODE_SEND) return;
-    
-//     String str = "";
-
-//     // if(lora_recv_success) {
-//     //     lora_recv_success = false;
-
-//     //     recv_cnt += strlen(lora_recv_data.c_str());
-
-//     //     lv_label_set_text_fmt(cnt_label, "R:%d", recv_cnt);
-
-//     //     str += lora_recv_data;
-
-//     //     lv_label_set_text_fmt(lora_lab_buf[0], "RECV: %ddBm", lora_recv_rssi);
-
-//     //     if(lora_lab_buf[lora_lab_cnt] == NULL) {
-//     //         lora_lab_buf[lora_lab_cnt] = scr2_create_label(scr2_cont_info);
-//     //         lv_label_set_text(lora_lab_buf[lora_lab_cnt], str.c_str());
-//     //     } else {
-//     //         lv_label_set_text(lora_lab_buf[lora_lab_cnt], str.c_str());
-//     //     }
-
-//     //     lora_lab_cnt++;
-//     //     if(lora_lab_cnt >= LORA_RECV_INFO_MAX_LINE) {
-//     //         lora_lab_cnt = 1;
-//     //     }
-//     // }
-// }
-
-// static void lora_mode_sw_event(lv_event_t * e)
-// {
-//     if(lora_mode_st == LORA_MODE_SEND)
-//     {
-//         lora_mode_st = LORA_MODE_RECV;
-//         lv_obj_add_flag(keyborad, LV_OBJ_FLAG_HIDDEN);
-//         lv_obj_add_flag(textarea, LV_OBJ_FLAG_HIDDEN);
-//         lv_obj_clear_flag(scr2_cont_info, LV_OBJ_FLAG_HIDDEN);
-//         lv_timer_resume(lora_send_timer);
-//         lora_lab_cnt = 1;
-
-//         ui_lora_set_mode(LORA_MODE_RECV);
-//     } 
-//     else if(lora_mode_st == LORA_MODE_RECV) 
-//     {
-//         lora_mode_st = LORA_MODE_SEND;
-//         lv_obj_clear_flag(keyborad, LV_OBJ_FLAG_HIDDEN);
-//         lv_obj_clear_flag(textarea, LV_OBJ_FLAG_HIDDEN);
-//         lv_obj_add_flag(scr2_cont_info, LV_OBJ_FLAG_HIDDEN);
-//         lv_timer_pause(lora_send_timer);
-
-//         ui_lora_set_mode(LORA_MODE_SEND);
-//     }
-
-//     lv_label_set_text_fmt(lora_mode_lab, "MODE : %s", (lora_mode_st == LORA_MODE_SEND)? "SEND" : "RECV");
-// }
-
-// static void ta_event_cb(lv_event_t * e)
-// {
-//     lv_event_code_t code = lv_event_get_code(e);
-//     lv_obj_t * ta = lv_event_get_target(e);
-//     lv_obj_t * kb = (lv_obj_t *)lv_event_get_user_data(e);
-
-//     if(code == LV_EVENT_VALUE_CHANGED)
-//     {
-//         printf("LV_EVENT_VALUE_CHANGED\n");
-//     }
-
-//     if(code == LV_EVENT_READY)
-//     {
-//         printf("LV_EVENT_READY\n");
-//         int ret = 0;
-//         ui_test_get_lora(&ret);
-//         if(ret == true) 
-//         {
-//             const char *str = lv_textarea_get_text(ta);
-//             int str_len = strlen(str);
-
-//             send_cnt += str_len;
-//             lv_label_set_text_fmt(cnt_label, "S:%d", send_cnt);
-//             ui_lora_transmit(str);
-//         }
-//         else 
-//         {
-//             printf("Not found LORA\n");
-//         }
-//         lv_textarea_set_text(ta,"");
-//     }
-// }
 lv_obj_t * scr2_list;
 static lv_obj_t *scr2_lab_buf[20];
 
@@ -871,52 +758,6 @@ static void scr2_item_create(const char *name, lv_event_cb_t cb)
 
 static void create2(lv_obj_t *parent) 
 {
-    // /*Create a keyboard to use it with an of the text areas*/
-    // keyborad = lv_keyboard_create(parent);
-
-    // /*Create a text area. The keyboard will write here*/
-    // textarea = lv_textarea_create(parent);
-    // lv_obj_align(textarea, LV_ALIGN_TOP_MID, 0, 100);
-    // lv_obj_add_event_cb(textarea, ta_event_cb, LV_EVENT_VALUE_CHANGED, keyborad);
-    // lv_obj_add_event_cb(textarea, ta_event_cb, LV_EVENT_READY, keyborad);
-    // lv_obj_set_size(textarea, lv_pct(98), 150);
-    // lv_obj_clear_flag(textarea, LV_OBJ_FLAG_CLICKABLE);
-    // lv_obj_set_style_text_letter_space(textarea, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-    // lv_obj_set_style_text_line_space(textarea, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    // lv_keyboard_set_textarea(keyborad, textarea);
-
-    // scr2_cont_info = lv_obj_create(parent);
-    // lv_obj_set_size(scr2_cont_info, lv_pct(98), lv_pct(84));
-    // lv_obj_set_style_bg_color(scr2_cont_info, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
-    // lv_obj_set_scrollbar_mode(scr2_cont_info, LV_SCROLLBAR_MODE_OFF);
-    // lv_obj_clear_flag(scr2_cont_info, LV_OBJ_FLAG_SCROLLABLE);
-    // lv_obj_set_style_border_width(scr2_cont_info, 1, LV_PART_MAIN);
-    // lv_obj_set_style_pad_all(scr2_cont_info, 0, LV_PART_MAIN);
-    // lv_obj_set_style_pad_left(scr2_cont_info, 50, LV_PART_MAIN);
-    // lv_obj_set_flex_flow(scr2_cont_info, LV_FLEX_FLOW_COLUMN);
-    // lv_obj_set_style_pad_row(scr2_cont_info, 10, LV_PART_MAIN);
-    // lv_obj_set_style_pad_column(scr2_cont_info, 5, LV_PART_MAIN);
-    // lv_obj_align(scr2_cont_info, LV_ALIGN_BOTTOM_MID, 0, -10);
-
-    // for(int i = 0; i < LORA_RECV_INFO_MAX_LINE; i++) {
-    //     lora_lab_buf[i] = scr2_create_label(scr2_cont_info);
-    //     lv_label_set_text(lora_lab_buf[i], " ");
-    // }
-    // lv_label_set_text(lora_lab_buf[0], "RECV : dBm");
-
-    // //
-    // lora_mode_sw = lv_btn_create(parent);
-    // lv_obj_set_style_radius(lora_mode_sw, 5, LV_PART_MAIN);
-    // lv_obj_set_style_border_width(lora_mode_sw, 2, LV_PART_MAIN);
-    // lora_mode_lab = lv_label_create(lora_mode_sw);
-    // lv_obj_set_style_text_font(lora_mode_lab, &Font_Mono_Bold_25, LV_PART_MAIN);
-    // lv_obj_align(lora_mode_sw, LV_ALIGN_TOP_MID, 0, 22);
-    // lv_obj_add_event_cb(lora_mode_sw, lora_mode_sw_event, LV_EVENT_CLICKED, NULL);
-
-    // cnt_label = lv_label_create(parent);
-    // lv_obj_set_style_text_font(cnt_label, &Font_Mono_Bold_25, LV_PART_MAIN);
-    // lv_obj_align(cnt_label, LV_ALIGN_TOP_RIGHT, -30, 22);
-
     scr2_list = lv_list_create(parent);
     lv_obj_set_size(scr2_list, lv_pct(93), lv_pct(91));
     lv_obj_align(scr2_list, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -1093,6 +934,159 @@ static scr_lifecycle_t screen2_1 = {
 #endif
 // --------------------- screen 2.2 --------------------- Manual Send
 #if 1
+#define LORA_RECV_INFO_MAX_LINE 12
+#define MANUAL_SEND_LINE_MAX 12
+#define MANUAL_SEND_LINE_MAX_CH 34
+
+static int lora_mode_st = LORA_MODE_SEND;
+static lv_obj_t *lora_mode_lab;
+// static lv_obj_t *lora_mode_sw;
+static lv_obj_t *keyborad;
+static lv_obj_t *textarea;
+static lv_obj_t *cnt_label;
+static lv_timer_t *lora_send_timer = NULL;
+
+static int send_cnt = 0;
+static int recv_cnt = 0;
+static int lora_lab_cnt = 0;
+int lab_idx = 0;
+
+static int scr2_2_refresh_mode;
+
+static lv_obj_t *scr2_2_cont_info;
+
+static void lora_send_timer_event(lv_timer_t *t)
+{
+    if(lora_mode_st == LORA_MODE_SEND) return;
+    
+    String str = "";
+
+    // if(lora_recv_success) {
+    //     lora_recv_success = false;
+
+    //     recv_cnt += strlen(lora_recv_data.c_str());
+
+    //     lv_label_set_text_fmt(cnt_label, "R:%d", recv_cnt);
+
+    //     str += lora_recv_data;
+
+    //     lv_label_set_text_fmt(scr2_lab_buf[0], "RECV: %ddBm", lora_recv_rssi);
+
+    //     if(scr2_lab_buf[lora_lab_cnt] == NULL) {
+    //         scr2_lab_buf[lora_lab_cnt] = scr2_create_label(scr2_cont_info);
+    //         lv_label_set_text(scr2_lab_buf[lora_lab_cnt], str.c_str());
+    //     } else {
+    //         lv_label_set_text(scr2_lab_buf[lora_lab_cnt], str.c_str());
+    //     }
+
+    //     lora_lab_cnt++;
+    //     if(lora_lab_cnt >= LORA_RECV_INFO_MAX_LINE) {
+    //         lora_lab_cnt = 1;
+    //     }
+    // }
+}
+
+static void lora_mode_sw_event(lv_event_t * e)
+{
+    if(lora_mode_st == LORA_MODE_SEND)
+    {
+        lora_mode_st = LORA_MODE_RECV;
+        lv_obj_add_flag(keyborad, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(textarea, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(scr2_2_cont_info, LV_OBJ_FLAG_HIDDEN);
+        lv_timer_resume(lora_send_timer);
+        lora_lab_cnt = 1;
+
+        ui_lora_set_mode(LORA_MODE_RECV);
+    } 
+    else if(lora_mode_st == LORA_MODE_RECV) 
+    {
+        lora_mode_st = LORA_MODE_SEND;
+        lv_obj_clear_flag(keyborad, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(textarea, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(scr2_2_cont_info, LV_OBJ_FLAG_HIDDEN);
+        lv_timer_pause(lora_send_timer);
+
+        ui_lora_set_mode(LORA_MODE_SEND);
+    }
+
+    lv_label_set_text_fmt(lora_mode_lab, "MODE : %s", (lora_mode_st == LORA_MODE_SEND)? "SEND" : "RECV");
+}
+
+static void ta_event_cb(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * ta = lv_event_get_target(e);
+    lv_obj_t * kb = (lv_obj_t *)lv_event_get_user_data(e);
+
+    if(code == LV_EVENT_VALUE_CHANGED)
+    {
+        printf("LV_EVENT_VALUE_CHANGED\n");
+    }
+
+    // if(code == LV_EVENT_READY)
+    // {
+    //     printf("LV_EVENT_READY\n");
+    //     int ret = 0;
+    //     ui_test_get_lora(&ret);
+    //     if(ret == true) 
+    //     {
+    //         const char *str = lv_textarea_get_text(ta);
+    //         int str_len = strlen(str);
+
+    //         send_cnt += str_len;
+    //         lv_label_set_text_fmt(cnt_label, "S:%d", send_cnt);
+    //         // ui_lora_transmit(str);
+    //     }
+    //     else 
+    //     {
+    //         printf("Not found LORA\n");
+    //     }
+    //     lv_textarea_set_text(ta,"");
+    // }
+
+
+    if(code == LV_EVENT_READY)
+    {
+        char *str = (char *)lv_textarea_get_text(ta);
+        int str_len = strlen(str);
+
+        send_cnt += str_len;
+        lv_label_set_text_fmt(cnt_label, "S:%d", send_cnt);
+
+        printf("lab_idx=%d, mode=%d, len=%d, %s\n", lab_idx, lora_mode_st, str_len, str);
+
+        ui_lora_send(str);
+
+        static bool negation = true;
+
+        // if(negation)
+        // {
+            lv_label_set_text_fmt(scr2_lab_buf[lab_idx], "S:%s", str);
+        // } else {
+        //     char buf[MANUAL_SEND_LINE_MAX_CH];
+        //     lv_snprintf(buf, MANUAL_SEND_LINE_MAX_CH, "%s:R", str);
+        //     int len = strlen(buf);
+        //     int i;
+        //     for(i = 0; i < MANUAL_SEND_LINE_MAX_CH-len; i++)
+        //     {
+        //         buf[i] = ' ';
+        //     }
+
+        //     printf("len=%d, i=%d\n", len, i);
+        //     strcpy(&buf[i], str);
+        //     lv_label_set_text_fmt(scr2_lab_buf[lab_idx], "%s:R", buf);
+        // }
+        // negation = !negation;
+
+        lab_idx++;
+        if(lab_idx >= MANUAL_SEND_LINE_MAX) {
+            lab_idx = 0;
+        }
+        lv_textarea_set_text(ta,"");
+    }
+}
+
 static void scr2_2_btn_event_cb(lv_event_t * e)
 {
     if(e->code == LV_EVENT_CLICKED){
@@ -1100,14 +1094,90 @@ static void scr2_2_btn_event_cb(lv_event_t * e)
     }
 }
 
+static lv_obj_t * scr2_2_create_label(lv_obj_t *parent)
+{
+    lv_obj_t *label = lv_label_create(parent);
+    lv_obj_set_width(label, lv_pct(99));
+    lv_obj_set_style_text_font(label, &Font_Mono_Bold_25, LV_PART_MAIN);   
+    lv_obj_set_style_border_width(label, 0, LV_PART_MAIN);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_border_side(label, LV_BORDER_SIDE_BOTTOM, LV_PART_MAIN);
+    lv_obj_set_style_text_letter_space(label, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    return label;
+}
+
+
 static void create2_2(lv_obj_t *parent) 
 {
+    /*Create a keyboard to use it with an of the text areas*/
+    keyborad = lv_keyboard_create(parent);
+    lv_obj_set_height(keyborad, lv_pct(40));
+    lv_obj_align(keyborad, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_border_width(keyborad, 0, LV_PART_MAIN);
+
+    /*Create a text area. The keyboard will write here*/
+    textarea = lv_textarea_create(parent);
+    lv_obj_set_style_text_font(textarea, &Font_Mono_Bold_25, LV_PART_MAIN);  
+    lv_obj_add_event_cb(textarea, ta_event_cb, LV_EVENT_VALUE_CHANGED, keyborad);
+    lv_obj_add_event_cb(textarea, ta_event_cb, LV_EVENT_READY, keyborad);
+    lv_obj_set_size(textarea, lv_pct(98), lv_pct(6));
+    // lv_obj_add_state(textarea, LV_STATE_FOCUSED);       /// States
+    lv_obj_clear_flag(textarea, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_text_letter_space(textarea, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_line_space(textarea, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_keyboard_set_textarea(keyborad, textarea);
+    // lv_obj_set_style_border_width(textarea, 0, LV_PART_MAIN);
+    // lv_obj_set_style_shadow_width(textarea, 0, LV_PART_MAIN);
+    // lv_obj_set_style_outline_width(textarea, 0, LV_PART_MAIN);
+    lv_obj_align_to(textarea, keyborad, LV_ALIGN_OUT_TOP_MID, 0, -5);
+
+    scr2_2_cont_info = lv_obj_create(parent);
+    
+    lv_obj_set_size(scr2_2_cont_info, lv_pct(100), lv_pct(45));
+    lv_obj_set_style_bg_color(scr2_2_cont_info, lv_color_hex(EPD_COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_scrollbar_mode(scr2_2_cont_info, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(scr2_2_cont_info, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_border_width(scr2_2_cont_info, 1, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(scr2_2_cont_info, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(scr2_2_cont_info, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(scr2_2_cont_info, 10, LV_PART_MAIN);
+    lv_obj_set_flex_flow(scr2_2_cont_info, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(scr2_2_cont_info, 6, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(scr2_2_cont_info, 0, LV_PART_MAIN);
+    lv_obj_align_to(scr2_2_cont_info, textarea, LV_ALIGN_OUT_TOP_MID, 0, 0);
+
+    for(int i = 0; i < MANUAL_SEND_LINE_MAX; i++) {
+        scr2_lab_buf[i] = scr2_2_create_label(scr2_2_cont_info);
+        lv_label_set_text(scr2_lab_buf[i], ":");
+    }
+    // 
+    // lora_mode_sw = lv_btn_create(parent);
+    // lv_obj_set_style_radius(lora_mode_sw, 5, LV_PART_MAIN);
+    // lv_obj_set_style_border_width(lora_mode_sw, 2, LV_PART_MAIN);
+    // lora_mode_lab = lv_label_create(lora_mode_sw);
+    // lv_obj_set_style_text_font(lora_mode_lab, &Font_Mono_Bold_25, LV_PART_MAIN);
+    // lv_obj_align(lora_mode_sw, LV_ALIGN_TOP_MID, 0, 22);
+    // lv_obj_add_event_cb(lora_mode_sw, lora_mode_sw_event, LV_EVENT_CLICKED, NULL);
+
+    cnt_label = lv_label_create(parent);
+    lv_obj_set_style_text_font(cnt_label, &Font_Mono_Bold_25, LV_PART_MAIN);
+    lv_obj_align(cnt_label, LV_ALIGN_TOP_RIGHT, -30, 22);
+    lv_label_set_text_fmt(cnt_label, "S:%d", send_cnt);
+
     scr_back_btn_create(parent, ("Manual Send"), scr2_2_btn_event_cb);
 }
 static void entry2_2(void) 
 {
+    ui_setting_get_refresh_speed(&scr2_2_refresh_mode);
+    ui_refresh_set_mode(UI_REFRESH_MODE_FAST);
+
+    if(ui_lora_get_mode() == LORA_MODE_RECV) {
+        ui_lora_set_mode(LORA_MODE_SEND);
+    }
 }
-static void exit2_2(void) {
+static void exit2_2(void) 
+{
+    ui_refresh_set_mode(scr2_2_refresh_mode);
 }
 static void destroy2_2(void) { }
 
@@ -2344,13 +2414,13 @@ static void scr8_btn_event_cb(lv_event_t * e)
 static void scr8_shutdown_timer_event(lv_timer_t *t)
 {
     lv_timer_del(t);
+    ui_epd_clean();
     ui_shutdown();
 }
 
 static void create8(lv_obj_t *parent)
 {
-
-    if(battery_25896_is_chr()) 
+    if(battery_25896_is_vbus_in()) 
     {
         lv_obj_t * label = lv_label_create(parent);
         lv_obj_set_width(label, lv_pct(98));
@@ -2366,14 +2436,14 @@ static void create8(lv_obj_t *parent)
     } 
     else 
     {
+        ui_setting_set_vcom(5000);
+
         lv_obj_t * img = lv_img_create(parent);
         lv_img_set_src(img, &img_start);
         lv_obj_center(img);
 
-        lv_timer_create(scr8_shutdown_timer_event, 3000, NULL);
+        lv_timer_create(scr8_shutdown_timer_event, 2000, (void *)parent);
     }
-
-    
 }
 
 static void entry8(void) {
@@ -2431,7 +2501,6 @@ static scr_lifecycle_t screen9 = {
     .destroy = destroy9,
 };
 #endif
-
 //************************************[ UI ENTRY ]******************************************
 static lv_obj_t *menu_keypad;
 static lv_timer_t *menu_timer = NULL;

@@ -2,11 +2,16 @@
 
 #include "lvgl.h"
 
+#define UI_REFRESH_MODE_FAST   0
+#define UI_REFRESH_MODE_NORMAL 1
+#define UI_REFRESH_MODE_NEAT   2
+
 void ui_indev_touch_en(void);
 void ui_indev_touch_dis(void);
 void ui_refresh_set_mode(int mode);
 void ui_full_refresh(void);
 void ui_full_clean(void);
+void ui_epd_clean(void);
 void ui_set_rotation(lv_disp_rot_t rot);
 
 // clock
@@ -57,11 +62,11 @@ const char *ui_wifi_get_ssid(void);
 const char *ui_wifi_get_pwd(void);
 
 // battery
-int battery_get_capacity(void);
 /* 25896 */
 void battery_chg_encharge(void);
 void battery_chg_discharge(void);
 bool battery_25896_is_vaild(void);
+bool battery_25896_is_vbus_in(void);
 bool battery_25896_is_chr(void);
 void battery_25896_refr(void);
 const char * battery_25896_get_CHG_ST(void);
