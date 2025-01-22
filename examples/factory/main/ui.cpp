@@ -2141,7 +2141,7 @@ static void battery_data_refr(void)
         battery_set_line(batt_right[1], "Charing Status:", buf);
 
         lv_snprintf(buf, line_max, "0x%x", ui_battery_27220_get_status());
-        battery_set_line(batt_right[2], "Battert Status:", buf);
+        battery_set_line(batt_right[2], "Battery Status:", buf);
 
         lv_snprintf(buf, line_max, "%dmV", ui_battery_27220_get_voltage());
         battery_set_line(batt_right[3], "Voltage:", buf);
@@ -2310,7 +2310,7 @@ static scr_lifecycle_t screen7 = {
 #define line_max 32
 static lv_obj_t *scr3_cont;
 static lv_obj_t *scr3_cnt_lab;
-static lv_obj_t *scr8_lab_buf[10];
+static lv_obj_t *scr8_lab_buf[8];
 static lv_timer_t *GPS_loop_timer = NULL;
 
 static void scr_label_line_algin(lv_obj_t *label, int line_len, const char *str1, const char *str2)
@@ -2376,10 +2376,10 @@ static void scr3_GPS_updata(void)
     scr_label_line_algin(scr8_lab_buf[5], line_max, "time:", global_buf);
 
     lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%0.2f kmph", speed);
-    scr_label_line_algin(scr8_lab_buf[6], line_max, "satellites:", global_buf);
+    scr_label_line_algin(scr8_lab_buf[6], line_max, "Speed:", global_buf);
 
     lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%d", vsat);
-    scr_label_line_algin(scr8_lab_buf[7], line_max, "vsat:", global_buf);
+    scr_label_line_algin(scr8_lab_buf[7], line_max, "satellites:", global_buf);
 
     // lv_snprintf(global_buf, GLOBAL_BUF_LEN, "%0.1f", alt);
     // scr_label_line_algin(scr8_lab_buf[8], line_max, "alt:", global_buf);

@@ -59,6 +59,7 @@ bool lora_sx1262_init(void)
     // when packet transmission is finished
     radio.setPacketSentAction(set_transmit_flag);
 
+    // SX1262 : Allowed values are in range from 150.0 to 960.0 MHz.
     if (radio.setFrequency(LORA_FREQUENNCY) == RADIOLIB_ERR_INVALID_FREQUENCY)
     {
         Serial.println(F("Selected frequency is invalid for this module!"));
@@ -66,7 +67,7 @@ bool lora_sx1262_init(void)
             ;
     }
 
-    // set bandwidth to 250 kHz
+    // SX1268/SX1262 : Allowed values are 7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125.0, 250.0 and 500.0 kHz.
     if (radio.setBandwidth(LORA_BANDWIDTH) == RADIOLIB_ERR_INVALID_BANDWIDTH)
     {
         Serial.println(F("Selected bandwidth is invalid for this module!"));
@@ -82,7 +83,7 @@ bool lora_sx1262_init(void)
             ;
     }
 
-    // set coding rate to 6
+    // SX1262:  Allowed values range from 5 to 12.
     if (radio.setCodingRate(6) == RADIOLIB_ERR_INVALID_CODING_RATE)
     {
         Serial.println(F("Selected coding rate is invalid for this module!"));
@@ -98,7 +99,7 @@ bool lora_sx1262_init(void)
             ;
     }
 
-    // set output power to 22 dBm (accepted range is -17 - 22 dBm)
+    // SX1262 : Allowed values are in range from -9 to 22 dBm. This method is virtual to allow override from the SX1261 class.
     if (radio.setOutputPower(LORA_OUTPUT_POWER) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
     {
         Serial.println(F("Selected output power is invalid for this module!"));
@@ -115,7 +116,7 @@ bool lora_sx1262_init(void)
             ;
     }
 
-    // set LoRa preamble length to 15 symbols (accepted range is 0 - 65535)
+    // SX1262/SX1268 : Allowed values range from 1 to 65535.
     if (radio.setPreambleLength(15) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH)
     {
         Serial.println(F("Selected preamble length is invalid for this module!"));

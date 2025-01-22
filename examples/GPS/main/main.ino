@@ -3,32 +3,27 @@
 #include <TinyGPS++.h>
 #include "ExtensionIOXL9555.hpp"
 
-#define BOARD_GPS_RXD 44
-#define BOARD_GPS_TXD 43
-#define SerialMon Serial
-#define SerialGPS Serial2
 
 #define SENSOR_SDA  39
 #define SENSOR_SCL  40
 #define SENSOR_IRQ  -1
 
+#define BOARD_GPS_RXD 44
+#define BOARD_GPS_TXD 43
+#define BOARD_GPS_PPS 1
+#define SerialMon Serial
+#define SerialGPS Serial2
 
-const char *gpsStream =
-  "$GPRMC,045103.000,A,3014.1984,N,09749.2872,W,0.67,161.46,030913,,,A*7C\r\n"
-  "$GPGGA,045104.000,3014.1985,N,09749.2873,W,1,09,1.2,211.6,M,-22.5,M,,0000*62\r\n"
-  "$GPRMC,045200.000,A,3014.3820,N,09748.9514,W,36.88,65.02,030913,,,A*77\r\n"
-  "$GPGGA,045201.000,3014.3864,N,09748.9411,W,1,10,1.2,200.8,M,-22.5,M,,0000*6C\r\n"
-  "$GPRMC,045251.000,A,3014.4275,N,09749.0626,W,0.51,217.94,030913,,,A*7D\r\n"
-  "$GPGGA,045252.000,3014.4273,N,09749.0628,W,1,09,1.3,206.9,M,-22.5,M,,0000*6F\r\n";
+void displayInfo();
+static bool GPS_Recovery();
+bool gps_init(void);
 
+ExtensionIOXL9555 io;
 
 // The TinyGPSPlus object
 TinyGPSPlus gps;
-ExtensionIOXL9555 io;
+uint8_t buffer[256];
 
-// The serial connection to the GPS device
-
-void displayInfo(void);
 
 void setup(void)
 {
@@ -60,85 +55,214 @@ void setup(void)
         }
     }
 
-    Serial.println(F("DeviceExample.ino"));
-    Serial.println(F("A simple demonstration of TinyGPSPlus with an attached GPS module"));
-    Serial.print(F("Testing TinyGPSPlus library v. ")); Serial.println(TinyGPSPlus::libraryVersion());
-    Serial.println(F("by Mikal Hart"));
-    Serial.println();
+    SerialMon.begin(38400);
+    gps_init();
+
+    delay(1500);
 }
 
 void loop(void)
 {
-    // while (SerialGPS.available())
-    // {
-    //     SerialMon.write(SerialGPS.read());
-    // }
-    // while (SerialMon.available())
-    // {
-    //     SerialGPS.write(SerialMon.read());
-    // }
-    // delay(1);
+    while (SerialMon.available()) {
+        SerialGPS.write(Serial.read());
+    }
 
-    const char * gpsStr = gpsStream;
-    while (*gpsStr)
-    if (gps.encode(*gpsStr++))
-      displayInfo();
+    while (SerialGPS.available()) {
+        int c = SerialGPS.read();
+        // Serial.write(c);
+        if (gps.encode(c)) {
+            displayInfo();
+        }
+    }
 
-    // if (millis() > 5000 && gps.charsProcessed() < 10)
-    // {
-    //     Serial.println(F("No GPS detected: check wiring."));
-    //     while(true);
-    // }
-    delay(1000);
+    if (millis() > 30000 && gps.charsProcessed() < 10) {
+        SerialMon.println(F("No GPS detected: check wiring."));
+        delay(1000);
+    }
+    delay(500);
 }
+
+bool gps_init(void)
+{   
+    bool result = false;
+    // L76K GPS USE 9600 BAUDRATE
+    // result = setupGPS();
+    if(!result) {
+        // Set u-blox m10q gps baudrate 38400
+        SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
+        result = GPS_Recovery();
+        if (!result) {
+            SerialGPS.updateBaudRate(9600);
+            result = GPS_Recovery();
+            if (!result) {
+                Serial.println("GPS Connect failed~!");
+                result = false;
+            }
+            SerialGPS.updateBaudRate(38400);
+        }
+    }
+    return result;
+}
+
 
 void displayInfo()
 {
-  Serial.print(F("Location: ")); 
-  if (gps.location.isValid())
-  {
-    Serial.print(gps.location.lat(), 6);
-    Serial.print(F(","));
-    Serial.print(gps.location.lng(), 6);
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
+    Serial.print(F("Location: "));
+    if (gps.location.isValid())
+    {
+        Serial.print(gps.location.lat(), 6);
+        Serial.print(F(","));
+        Serial.print(gps.location.lng(), 6);
+    }
+    else
+    {
+        Serial.print(F("INVALID"));
+    }
 
-  Serial.print(F("  Date/Time: "));
-  if (gps.date.isValid())
-  {
-    Serial.print(gps.date.month());
-    Serial.print(F("/"));
-    Serial.print(gps.date.day());
-    Serial.print(F("/"));
-    Serial.print(gps.date.year());
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
+    Serial.print(F("  Date/Time: "));
+    if (gps.date.isValid())
+    {
+        Serial.print(gps.date.month());
+        Serial.print(F("/"));
+        Serial.print(gps.date.day());
+        Serial.print(F("/"));
+        Serial.print(gps.date.year());
+    }
+    else
+    {
+        Serial.print(F("INVALID"));
+    }
 
-  Serial.print(F(" "));
-  if (gps.time.isValid())
-  {
-    if (gps.time.hour() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.hour());
-    Serial.print(F(":"));
-    if (gps.time.minute() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.minute());
-    Serial.print(F(":"));
-    if (gps.time.second() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.second());
-    Serial.print(F("."));
-    if (gps.time.centisecond() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.centisecond());
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
+    Serial.print(F(" "));
+    if (gps.time.isValid())
+    {
+        if (gps.time.hour() < 10)
+            Serial.print(F("0"));
+        Serial.print(gps.time.hour());
+        Serial.print(F(":"));
+        if (gps.time.minute() < 10)
+            Serial.print(F("0"));
+        Serial.print(gps.time.minute());
+        Serial.print(F(":"));
+        if (gps.time.second() < 10)
+            Serial.print(F("0"));
+        Serial.print(gps.time.second());
+        Serial.print(F("."));
+    }
+    else
+    {
+        Serial.print(F("INVALID"));
+    }
 
-  Serial.println();
+    Serial.print(F("  Satellites: "));
+    if(gps.satellites.isValid())
+    {
+        Serial.print(gps.satellites.value());
+        Serial.print(F(" "));
+    }
+
+    Serial.print(F("  Speed: "));
+    if(gps.speed.isValid())
+    {
+        Serial.print(gps.speed.kmph());
+        Serial.print(F(" "));
+    }
+
+    Serial.println();
+}
+
+
+static int getAck(uint8_t *buffer, uint16_t size, uint8_t requestedClass, uint8_t requestedID)
+{
+    uint16_t    ubxFrameCounter = 0;
+    bool        ubxFrame = 0;
+    uint32_t    startTime = millis();
+    uint16_t    needRead;
+
+    while (millis() - startTime < 800) {
+        while (SerialGPS.available()) {
+            int c = SerialGPS.read();
+            switch (ubxFrameCounter) {
+            case 0:
+                if (c == 0xB5) {
+                    ubxFrameCounter++;
+                }
+                break;
+            case 1:
+                if (c == 0x62) {
+                    ubxFrameCounter++;
+                } else {
+                    ubxFrameCounter = 0;
+                }
+                break;
+            case 2:
+                if (c == requestedClass) {
+                    ubxFrameCounter++;
+                } else {
+                    ubxFrameCounter = 0;
+                }
+                break;
+            case 3:
+                if (c == requestedID) {
+                    ubxFrameCounter++;
+                } else {
+                    ubxFrameCounter = 0;
+                }
+                break;
+            case 4:
+                needRead = c;
+                ubxFrameCounter++;
+                break;
+            case 5:
+                needRead |=  (c << 8);
+                ubxFrameCounter++;
+                break;
+            case 6:
+                if (needRead >= size) {
+                    ubxFrameCounter = 0;
+                    break;
+                }
+                if (SerialGPS.readBytes(buffer, needRead) != needRead) {
+                    ubxFrameCounter = 0;
+                } else {
+                    return needRead;
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+    return 0;
+}
+
+static bool GPS_Recovery()
+{
+    uint8_t cfg_clear1[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x1C, 0xA2};
+    uint8_t cfg_clear2[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x1B, 0xA1};
+    uint8_t cfg_clear3[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x03, 0x1D, 0xB3};
+    SerialGPS.write(cfg_clear1, sizeof(cfg_clear1));
+
+    if (getAck(buffer, 256, 0x05, 0x01)) {
+        Serial.println("Get ack successes!");
+    }
+    SerialGPS.write(cfg_clear2, sizeof(cfg_clear2));
+    if (getAck(buffer, 256, 0x05, 0x01)) {
+        Serial.println("Get ack successes!");
+    }
+    SerialGPS.write(cfg_clear3, sizeof(cfg_clear3));
+    if (getAck(buffer, 256, 0x05, 0x01)) {
+        Serial.println("Get ack successes!");
+    }
+
+    // UBX-CFG-RATE, Size 8, 'Navigation/measurement rate settings'
+    uint8_t cfg_rate[] = {0xB5, 0x62, 0x06, 0x08, 0x00, 0x00, 0x0E, 0x30};
+    SerialGPS.write(cfg_rate, sizeof(cfg_rate));
+    if (getAck(buffer, 256, 0x06, 0x08)) {
+        Serial.println("Get ack successes!");
+    } else {
+        return false;
+    }
+    return true;
 }

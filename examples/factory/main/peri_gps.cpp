@@ -23,7 +23,7 @@ bool gps_init(void)
 {   
     bool result = false;
     // L76K GPS USE 9600 BAUDRATE
-    result = setupGPS();
+    // result = setupGPS();
     if(!result) {
         // Set u-blox m10q gps baudrate 38400
         SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RXD, BOARD_GPS_TXD);
@@ -174,18 +174,20 @@ void displayInfo()
         Serial.print(F("INVALID"));
     }
 
+    Serial.print(F("  Satellites: "));
     if(gps.satellites.isValid())
     {
         gps_vsat = gps.satellites.value();
         Serial.print(gps_vsat);
-        Serial.print(F("*"));
+        Serial.print(F(" "));
     }
 
+    Serial.print(F("  Speed: "));
     if(gps.speed.isValid())
     {
         gps_speed = gps.speed.kmph();
         Serial.print(gps_speed);
-        Serial.print(F("*"));
+        Serial.print(F(" "));
     }
 
     Serial.println();
