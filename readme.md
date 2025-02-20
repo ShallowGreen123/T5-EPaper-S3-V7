@@ -16,10 +16,10 @@
 
 ### 1、Version
 
-|   ID    |  Hardware   |  Software   | Repository | Remark |
-| :-----: | :---------: | :---------: | :--------: | :----: |
-| H752-01 | v1.0-241224 | v1.2_250118 |            | latest |
-|  H752   | v1.0-240810 | v1.0-241203 |            |   -    |
+|                                       ID                                       |  Hardware   |  Software   | Remark |
+| :----------------------------------------------------------------------------: | :---------: | :---------: | :----: |
+| [H752-01](https://github.com/Xinyuan-LilyGO/T5S3-4.7-e-paper-PRO/tree/H752-01) | v1.0-241224 | v1.2_250118 | latest |
+|    [H752](https://github.com/Xinyuan-LilyGO/T5S3-4.7-e-paper-PRO/tree/H752)    | v1.0-240810 | v1.0-241203 |   -    |
 
 H752-01 new version :
 - Adds the ink screen power management chip TPS65185;
@@ -46,8 +46,6 @@ H752-01 new version :
 |         RTC         |                          PCF85063 (0x51)                          |
 | E-link Power Driver |                          TPS65185 (0x68)                          |
 |      IO Extend      |                         PCA9535PW (0x20)                          |
-
-
 
 ## :two: Module 🎁
 
@@ -199,6 +197,5 @@ Sleep power consumption.
 For more information, see the `./hardware` directory.
 
 Schematic : [T5_E-Paper-S3-Pro](./hardware/T5%20E-paper%20S3%20Pro%20V1.0%2024-12-24.pdf)
-
 
 3D Files : [3D Files](./DXF/)

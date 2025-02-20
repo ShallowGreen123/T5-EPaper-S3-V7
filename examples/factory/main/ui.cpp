@@ -1627,7 +1627,7 @@ const char *get_vcom_cb(int *ret_n)
 }
 
 static ui_setting_handle setting_handle_list[] = {
-    {.name="Backlight",       .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_backlight,     .get_cb=ui_setting_get_backlight},
+    {.name="Backlight",       .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_backlight_level,     .get_cb=ui_setting_get_backlight},
     {.name="Refresh Speed",   .type=UI_SETTING_TYPE_SW,  .set_cb=ui_setting_set_refresh_speed, .get_cb=ui_setting_get_refresh_speed},
     {.name = "-Set EPD Vcom", .type=UI_SETTING_TYPE_SUB, .set_cb=NULL, .get_cb=get_vcom_cb, .sub_id=SCREEN4_2_ID},
     {.name="-About System",   .type=UI_SETTING_TYPE_SUB, .set_cb=NULL, .get_cb=NULL,        .sub_id=SCREEN4_1_ID},
@@ -2497,7 +2497,7 @@ static void create8(lv_obj_t *parent)
     } 
     else 
     {
-        ui_setting_set_vcom(5000);
+        ui_shutdown_vcom(5000);
 
         lv_obj_t * img = lv_img_create(parent);
         lv_img_set_src(img, &img_start);

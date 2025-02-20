@@ -31,6 +31,8 @@
 #include "scr_mrg.h"
 #include "firasans_12.h"
 #include "firasans_20.h"
+#include "ui_port.h"
+#include "nvs_param.h"
 
 TaskHandle_t btn_handle;
 
@@ -55,7 +57,6 @@ SensorPCF8563 rtc;
 
 // LVGL
 #define DISP_BUF_SIZE (epd_rotated_display_width() * epd_rotated_display_height())
-int refresh_mode = REFRESH_MODE_NORMAL;
 uint8_t *decodebuffer = NULL;
 volatile bool disp_flush_enabled = true;
 volatile bool indev_touch_enabled = true;
@@ -99,11 +100,6 @@ void indev_touch_en()
 void indev_touch_dis()
 {
     indev_touch_enabled = false;
-}
-
-void disp_refresh_set_mode(int mode)
-{
-    refresh_mode = mode;
 }
 
 void disp_full_refresh(void)
@@ -163,12 +159,21 @@ void disp_refresh_screen(void)
 static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 {
     if(disp_flush_enabled) {
-        uint16_t w = lv_area_get_width(area);
+        uint16_t w = lv_area_get_width(area) / 2;
         uint16_t h = lv_area_get_height(area);
         lv_color32_t *t32 = (lv_color32_t *)color_p;
 
-        for(int i = 0; i < (w * h) / 2; i++) {
-
+#if 0   // Mirror screen or not
+        int w2 = w * 2;
+        for(int i = 0; i < h ; i++) {
+            for(int j = 0; j < w2 / 2; j++) {
+                lv_color_t t = *(color_p + (i * w2) + j);
+                *(color_p + (i * w2) + j) = *(color_p + (i * w2) + (w2 - j - 1));
+                *(color_p + (i * w2) + (w2 - j - 1)) = t;
+            }
+        }
+#endif
+        for(int i = 0; i < (w * h) ; i++) {
             lv_color8_t ret;
             LV_COLOR_SET_R8(ret, LV_COLOR_GET_R(*t32) >> 5); /*8 - 3  = 5*/
             LV_COLOR_SET_G8(ret, LV_COLOR_GET_G(*t32) >> 5); /*8 - 3  = 5*/
@@ -185,7 +190,7 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
         .height = epd_rotated_display_height(),
     };
 
-    if(refresh_mode == REFRESH_MODE_FAST) 
+    if(ui_refresh_get_mode() == UI_REFRESH_MODE_FAST) 
     {
         // disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
@@ -194,7 +199,7 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
         checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
         epd_poweroff();
     } 
-    else if(refresh_mode == REFRESH_MODE_NORMAL)
+    else if(ui_refresh_get_mode() == UI_REFRESH_MODE_NORMAL)
     {
         // disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
@@ -203,7 +208,7 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
         // checkError(epd_hl_update_area(&hl, MODE_DU, epd_ambient_temperature(), rener_area));
         epd_poweroff();
     } 
-    else if(refresh_mode == REFRESH_MODE_NEAT)
+    else if(ui_refresh_get_mode() == UI_REFRESH_MODE_NEAT)
     {
         disp_full_refresh();
         epd_draw_rotated_image(rener_area, decodebuffer, epd_hl_get_framebuffer(&hl));
@@ -241,7 +246,7 @@ static void lv_port_disp_init(void)
 
     lv_color_t *lv_disp_buf_1 = (lv_color_t *)ps_calloc(sizeof(lv_color_t), DISP_BUF_SIZE);
     lv_color_t *lv_disp_buf_2 = (lv_color_t *)ps_calloc(sizeof(lv_color_t), DISP_BUF_SIZE);
-    decodebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), DISP_BUF_SIZE);
+    decodebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), DISP_BUF_SIZE / 2);
     lv_disp_draw_buf_init(&draw_buf, lv_disp_buf_1, lv_disp_buf_2, DISP_BUF_SIZE);
 
     static lv_disp_drv_t disp_drv;
@@ -269,10 +274,10 @@ static bool touch_gt911_init(void)
     touch.setPins(BOARD_TOUCH_RST, BOARD_TOUCH_INT);
     if (!touch.begin(Wire, GT911_SLAVE_ADDRESS_L, BOARD_SDA, BOARD_SCL))
     {
-        while (1) {
+        // while (1) {
             Serial.println("Failed to find GT911 - check your wiring!");
-            delay(1000);
-        }
+        //     delay(1000);
+        // }
     }
     Serial.println("Init GT911 Sensor success!");
 
@@ -325,7 +330,6 @@ static void disp_init_status(const char *name, int *x, int *y, bool init_st)
     epd_poweron();
     checkError(epd_hl_update_screen(&hl, MODE_GL16, epd_ambient_temperature()));
     epd_poweroff();
-
 }
 
 static bool screen_init(void)
@@ -334,7 +338,7 @@ static bool screen_init(void)
     // Set VCOM for boards that allow to set this in software (in mV).
     // This will print an error if unsupported. In this case,
     // set VCOM using the hardware potentiometer and delete this line.
-    epd_set_vcom(1260);
+    epd_set_vcom(ui_setting_get_vcom());
     // epd_set_vcom(ui_setting_get_vcom()); // TPS651851 VCOM output range 0-5.1v  step:10mV
 
     hl = epd_hl_init(WAVEFORM);
@@ -477,9 +481,6 @@ static bool sd_card_init(void)
 
 void idf_setup() 
 {
-    int backlight = 0;
-    
-
     gpio_hold_dis((gpio_num_t)BOARD_TOUCH_RST);
     gpio_hold_dis((gpio_num_t)BOARD_LORA_RST);
     gpio_deep_sleep_hold_dis();
@@ -504,8 +505,9 @@ void idf_setup()
     Wire.begin(BOARD_SDA, BOARD_SCL);
 
     pinMode(BOARD_BL_EN, OUTPUT);
-    ui_setting_get_backlight(&backlight);
-    ui_setting_set_backlight(backlight);
+
+    // Init system
+    ui_nvs_set_defaulat_param();
 
     peri_buf[E_PERI_BQ27220]    = bq27220_init();   // PMU --- 0x55
     
